@@ -1,8 +1,17 @@
+import { React } from "@vendetta/metro/common";
+import { storage } from "@vendetta/plugin";
 import { Forms } from "@vendetta/ui/components";
-const { FormText } = Forms;
 
-export default () => (
-    <FormText>
-        Hello, world!
-    </FormText>
-)
+const { FormSwitch } = Forms;
+
+export default function SettingsPage() {
+  return (
+    <FormSwitch
+      label="Mark DMs as Read"
+      value={storage.includeDMs}
+      onValueChange={(value) => {
+        storage.includeDMs = value;
+      }}
+    />
+  );
+}
