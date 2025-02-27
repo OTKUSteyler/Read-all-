@@ -1,56 +1,47 @@
-import { storage } from "@vendetta/plugin";
+import { React, ReactNative } from "@vendetta/metro/common";
+import { findByProps } from "@vendetta/metro";
 import { registerSettings } from "@vendetta/settings";
-import { ReactNative } from "@vendetta/metro/common";
-import { findByProps, findByName } from "@vendetta/metro";
-import { before } from "@vendetta/patcher";
-import { styles } from "./styles";
+import { storage } from "@vendetta/plugin";
 import SettingsPage from "./Settings";
+import { styles } from "./styles";
 
-const { View, TouchableOpacity, Text, Alert } = ReactNative;
-const { markChannelAsRead } = findByProps("markChannelAsRead");
+// Vendetta UI Components
+const { View, TouchableOpacity, Text } = ReactNative;
 
-// Function to mark all channels as read
-const markAllAsRead = () => {
-    Alert.alert(
-        "Confirm",
-        "Are you sure you want to mark all messages as read?",
-        [
-            { text: "Cancel", style: "cancel" },
-            {
-                text: "Yes",
-                onPress: async () => {
-                    const channels = findByProps("getSortedGuildChannels").getSortedGuildChannels();
-                    Object.keys(channels).forEach((channelId) => {
-                        markChannelAsRead(channelId);
-                    });
-                    console.log("[ReadAll] Marked all messages as read.");
-                },
-            },
-        ]
-    );
+// Get the mark read function
+const { ackMessage } = findByProps("ackMessage");
+
+// Default storage setup
+storage.markDMs = storage.markDMs ?? true;
+
+// Function to mark all messages as read
+const markAllAsRead = async () => {
+    const channels = Object.values(findByProps("getChannel").getMutableChannels());
+
+    for (const channel of channels) {
+        // Skip DMs if disabled in settings
+        if (!storage.markDMs && channel.type === 1) continue;
+
+        try {
+            await ackMessage(channel.id);
+        } catch (error) {
+            console.error(`[ReadAll] Failed to mark ${channel.id} as read:`, error);
+        }
+    }
 };
 
-// Button Component (Injected into Navigation)
-const injectButton = () => {
-    const NavigationBar = findByName("NavigationBar", false);
-    if (!NavigationBar) return console.error("[ReadAll] NavigationBar not found!");
+// Button Component
+const ReadAllButton = () => (
+    <View style={styles.container}>
+        <TouchableOpacity style={styles.button} onPress={markAllAsRead}>
+            <Text style={styles.buttonText}>Mark All Read</Text>
+        </TouchableOpacity>
+    </View>
+);
 
-    return before("render", NavigationBar.prototype, (args, res) => {
-        res.props.children.push(
-            <TouchableOpacity style={styles.readAllButton} onPress={markAllAsRead}>
-                <Text style={styles.readAllText}>Mark All</Text>
-            </TouchableOpacity>
-        );
-    });
-};
-
-// Register the settings page and button injection
-let unpatch: () => void;
+// Register settings page
 export const onLoad = () => {
     registerSettings("read-all-settings", SettingsPage);
-    unpatch = injectButton();
 };
 
-export const onUnload = () => {
-    if (unpatch) unpatch();
-};
+export const onUnload = () => {};
