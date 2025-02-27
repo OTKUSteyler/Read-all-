@@ -6,32 +6,38 @@ import SettingsPage from "./Settings";
 
 const { View, TouchableOpacity, Text, StyleSheet } = ReactNative;
 
-// Ensure storage has default settings
+// Ensure default settings exist
 if (storage.markDMs === undefined) storage.markDMs = true;
 
-// Find Discord API methods
+// Get required Discord APIs
 const MessageStore = findByProps("ack", "markChannelRead");
 const GuildStore = findByProps("getGuilds");
 const ChannelStore = findByProps("getSortedPrivateChannels");
 
-if (!MessageStore?.markChannelRead || !GuildStore?.getGuilds) {
-  console.error("[ReadAll] Missing required functions!");
+if (!MessageStore || !MessageStore.markChannelRead) {
+  console.error("[ReadAll] Missing `markChannelRead` method!");
 }
 
 // **🔹 Function: Mark all messages as read**
 const markAllAsRead = () => {
-  if (!MessageStore?.markChannelRead || !GuildStore?.getGuilds) return;
+  if (!MessageStore?.markChannelRead) return;
 
-  // Mark all servers as read
-  Object.keys(GuildStore.getGuilds()).forEach((guildId) => {
-    MessageStore.markChannelRead(guildId);
-  });
-
-  // Mark DMs as read (if enabled in settings)
-  if (storage.markDMs && ChannelStore?.getSortedPrivateChannels) {
-    ChannelStore.getSortedPrivateChannels().forEach((dm) => {
-      MessageStore.markChannelRead(dm.channel.id);
+  // **Mark all servers as read**
+  const guilds = GuildStore?.getGuilds();
+  if (guilds) {
+    Object.keys(guilds).forEach((guildId) => {
+      MessageStore.markChannelRead(guildId);
     });
+  }
+
+  // **Mark all DMs as read (if enabled)**
+  if (storage.markDMs) {
+    const dms = ChannelStore?.getSortedPrivateChannels();
+    if (dms) {
+      dms.forEach((dm) => {
+        MessageStore.markChannelRead(dm.channel.id);
+      });
+    }
   }
 };
 
