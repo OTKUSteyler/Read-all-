@@ -1,8 +1,9 @@
 import { storage } from "@vendetta/plugin";
 import { registerSettings } from "@vendetta/settings";
 import { ReactNative } from "@vendetta/metro/common";
-import { findByProps } from "@vendetta/metro";
-import { styles } from "./styles"; // ✅ Use styles.ts instead of CSS
+import { findByProps, findByName } from "@vendetta/metro";
+import { before } from "@vendetta/patcher";
+import { styles } from "./styles";
 import SettingsPage from "./Settings";
 
 const { View, TouchableOpacity, Text, Alert } = ReactNative;
@@ -17,29 +18,39 @@ const markAllAsRead = () => {
             { text: "Cancel", style: "cancel" },
             {
                 text: "Yes",
-                onPress: () => {
-                    // Simulate marking channels as read (replace with real implementation)
-                    console.log("Marked all channels as read.");
+                onPress: async () => {
+                    const channels = findByProps("getSortedGuildChannels").getSortedGuildChannels();
+                    Object.keys(channels).forEach((channelId) => {
+                        markChannelAsRead(channelId);
+                    });
+                    console.log("[ReadAll] Marked all messages as read.");
                 },
             },
         ]
     );
 };
 
-// Button Component
-const ReadAllButton = () => {
-    return (
-        <View style={{ position: "absolute", top: 10, left: 10 }}>
+// Button Component (Injected into Navigation)
+const injectButton = () => {
+    const NavigationBar = findByName("NavigationBar", false);
+    if (!NavigationBar) return console.error("[ReadAll] NavigationBar not found!");
+
+    return before("render", NavigationBar.prototype, (args, res) => {
+        res.props.children.push(
             <TouchableOpacity style={styles.readAllButton} onPress={markAllAsRead}>
-                <Text style={styles.readAllText}>Mark All as Read</Text>
+                <Text style={styles.readAllText}>Mark All</Text>
             </TouchableOpacity>
-        </View>
-    );
+        );
+    });
 };
 
-// Register the settings page
+// Register the settings page and button injection
+let unpatch: () => void;
 export const onLoad = () => {
     registerSettings("read-all-settings", SettingsPage);
+    unpatch = injectButton();
 };
 
-export const onUnload = () => {};
+export const onUnload = () => {
+    if (unpatch) unpatch();
+};
