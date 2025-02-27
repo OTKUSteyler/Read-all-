@@ -1,77 +1,74 @@
 import { React } from "@vendetta/metro/common";
 import { findByProps } from "@vendetta/metro";
 
-const { View, TouchableOpacity, Text, Alert } = require("react-native");
+const { TouchableOpacity, Text, StyleSheet } = require("react-native");
 
 // Find Discord API methods
 const markRead = findByProps("ack", "markChannelRead")?.markChannelRead;
 const getGuilds = findByProps("getGuilds")?.getGuilds;
 const getSortedPrivateChannels = findByProps("getSortedPrivateChannels")?.getSortedPrivateChannels;
 
-let unpatch: (() => void) | null = null;
-
-// Function to mark all as read
+// Function to mark all messages as read
 const markAllAsRead = () => {
-  if (!markRead || !getGuilds) {
-    Alert.alert("Error", "Unable to mark messages as read. Discord API changed.");
-    return;
-  }
+  if (!markRead || !getGuilds) return;
 
   // Mark all servers as read
-  const guilds = Object.keys(getGuilds());
-  guilds.forEach((guildId) => markRead(guildId));
+  Object.keys(getGuilds()).forEach((guildId) => markRead(guildId));
 
   // Mark DMs as read
   if (getSortedPrivateChannels) {
-    const dms = getSortedPrivateChannels();
-    dms.forEach((dm) => markRead(dm.channel.id));
+    getSortedPrivateChannels().forEach((dm) => markRead(dm.channel.id));
   }
-
-  Alert.alert("Success", "All messages marked as read!");
 };
 
-// Inject button into sidebar
-const injectSidebarButton = () => {
-  const TabBar = findByProps("tabBarItem", "tabBarContainer");
-  if (!TabBar) return null;
+// Inject button into top bar
+let unpatch: (() => void) | null = null;
 
-  const SidebarButton = () => (
-    <TouchableOpacity
-      style={{
-        padding: 10,
-        marginVertical: 5,
-        borderRadius: 5,
-        backgroundColor: "#7289DA",
-        alignItems: "center",
-      }}
-      onPress={markAllAsRead}
-    >
-      <Text style={{ color: "white", fontWeight: "bold" }}>Mark All Read</Text>
+const injectTopBarButton = () => {
+  const TopBar = findByProps("TopTabBar", "tabBarContainer");
+  if (!TopBar) return null;
+
+  const Button = () => (
+    <TouchableOpacity style={styles.button} onPress={markAllAsRead}>
+      <Text style={styles.text}>✔ Read All</Text>
     </TouchableOpacity>
   );
 
-  const originalRender = TabBar.default;
-  TabBar.default = function PatchedTabBar(props) {
+  const originalRender = TopBar.TopTabBar;
+  TopBar.TopTabBar = function PatchedTopBar(props) {
     const render = originalRender.apply(this, arguments);
     return (
-      <View>
+      <>
         {render}
-        <SidebarButton />
-      </View>
+        <Button />
+      </>
     );
   };
 
   return () => {
-    TabBar.default = originalRender;
+    TopBar.TopTabBar = originalRender;
   };
 };
 
-// Load the plugin
+// Plugin lifecycle
 export const onLoad = () => {
-  unpatch = injectSidebarButton();
+  unpatch = injectTopBarButton();
 };
 
-// Unload the plugin
 export const onUnload = () => {
   if (unpatch) unpatch();
 };
+
+// Styles for the button
+const styles = StyleSheet.create({
+  button: {
+    padding: 8,
+    marginHorizontal: 10,
+    backgroundColor: "#7289DA",
+    borderRadius: 5,
+  },
+  text: {
+    color: "white",
+    fontWeight: "bold",
+  },
+});
