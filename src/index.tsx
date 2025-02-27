@@ -2,7 +2,7 @@ import { storage } from "@vendetta/plugin";
 import { registerSettings } from "@vendetta/settings";
 import { findByProps } from "@vendetta/metro";
 import { ReactNative } from "@vendetta/metro/common";
-import SettingsPage from "./settings";
+import SettingsPage from "./Settings";
 
 // UI Components
 const { View, TouchableOpacity, Text, Alert } = ReactNative;
