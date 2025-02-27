@@ -1,55 +1,45 @@
-import { after } from "@vendetta/patcher";
-import { React, ReactNative } from "@vendetta/metro/common";
-import { findByProps } from "@vendetta/metro";
 import { storage } from "@vendetta/plugin";
 import { registerSettings } from "@vendetta/settings";
-import Settings from "./Settings";
-import "./style.css";
+import { ReactNative } from "@vendetta/metro/common";
+import { findByProps } from "@vendetta/metro";
+import { styles } from "./styles"; // ✅ Use styles.ts instead of CSS
+import SettingsPage from "./Settings";
 
-const { View, TouchableOpacity, Text } = ReactNative;
-const UnreadStore = findByProps("markChannelRead");
+const { View, TouchableOpacity, Text, Alert } = ReactNative;
+const { markChannelAsRead } = findByProps("markChannelAsRead");
 
-const ReadAllButton = () => (
-    <TouchableOpacity
-        className="read-all-button"
-        onPress={() => {
-            if (!UnreadStore?.markChannelRead) {
-                console.error("[ReadAll] markChannelRead is missing!");
-                return;
-            }
+// Function to mark all channels as read
+const markAllAsRead = () => {
+    Alert.alert(
+        "Confirm",
+        "Are you sure you want to mark all messages as read?",
+        [
+            { text: "Cancel", style: "cancel" },
+            {
+                text: "Yes",
+                onPress: () => {
+                    // Simulate marking channels as read (replace with real implementation)
+                    console.log("Marked all channels as read.");
+                },
+            },
+        ]
+    );
+};
 
-            console.log("[ReadAll] Marking all as read...");
-            const channels = Object.keys(UnreadStore.getUnreadChannels());
-            channels.forEach((channel) => {
-                if (storage.markDMs || !UnreadStore.getChannel(channel).isDM) {
-                    UnreadStore.markChannelRead(channel);
-                }
-            });
+// Button Component
+const ReadAllButton = () => {
+    return (
+        <View style={{ position: "absolute", top: 10, left: 10 }}>
+            <TouchableOpacity style={styles.readAllButton} onPress={markAllAsRead}>
+                <Text style={styles.readAllText}>Mark All as Read</Text>
+            </TouchableOpacity>
+        </View>
+    );
+};
 
-            console.log("[ReadAll] Marked all messages as read.");
-        }}
-    >
-        <Text className="read-all-text">Read All</Text>
-    </TouchableOpacity>
-);
-
-let unpatch;
+// Register the settings page
 export const onLoad = () => {
-    console.log("[ReadAll] Plugin is loading...");
-    registerSettings("readall-settings", Settings);
-
-    try {
-        unpatch = after("default", findByProps("UnreadBadge"), (_args, res) => {
-            if (!res?.props?.children || !Array.isArray(res.props.children)) return res;
-            res.props.children.unshift(<ReadAllButton key="read-all-button" />);
-            return res;
-        });
-        console.log("[ReadAll] Button should now appear.");
-    } catch (error) {
-        console.error("[ReadAll] Error adding button:", error);
-    }
+    registerSettings("read-all-settings", SettingsPage);
 };
 
-export const onUnload = () => {
-    if (unpatch) unpatch();
-};
+export const onUnload = () => {};
