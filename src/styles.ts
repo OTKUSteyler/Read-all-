@@ -1,20 +1,21 @@
-import { ReactNative } from "@vendetta/metro/common";
-
-const { StyleSheet } = ReactNative;
+import { StyleSheet } from "react-native";
 
 export const styles = StyleSheet.create({
-    readAllButton: {
-        backgroundColor: "#7289da", // Discord blurple
-        paddingVertical: 8,
-        paddingHorizontal: 15,
+    container: {
+        position: "absolute",
+        top: 50,
+        left: 10,
+        backgroundColor: "#7289DA",
+        padding: 10,
         borderRadius: 5,
-        marginRight: 10,
-        alignItems: "center",
-        justifyContent: "center",
     },
-    readAllText: {
+    button: {
+        padding: 10,
+        backgroundColor: "#5865F2",
+        borderRadius: 5,
+    },
+    buttonText: {
         color: "white",
-        fontSize: 14,
         fontWeight: "bold",
     },
 });
