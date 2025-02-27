@@ -1,11 +1,6 @@
 import { React } from "@vendetta/metro/common";
-import { storage } from "@vendetta/plugin";
-import { registerSettings } from "@vendetta/settings";
-import SettingsPage from "./Settings";
-import { registerCommand } from "@vendetta/commands";
-import { findByProps, findByName } from "@vendetta/metro";
+import { findByProps } from "@vendetta/metro";
 
-// Import UI elements
 const { View, TouchableOpacity, Text, Alert } = require("react-native");
 
 // Find Discord API methods
@@ -13,11 +8,9 @@ const markRead = findByProps("ack", "markChannelRead")?.markChannelRead;
 const getGuilds = findByProps("getGuilds")?.getGuilds;
 const getSortedPrivateChannels = findByProps("getSortedPrivateChannels")?.getSortedPrivateChannels;
 
-// Ensure storage has default values
-storage.includeDMs ??= true;
+let unpatch: (() => void) | null = null;
 
-let patches: (() => void)[] = [];
-
+// Function to mark all as read
 const markAllAsRead = () => {
   if (!markRead || !getGuilds) {
     Alert.alert("Error", "Unable to mark messages as read. Discord API changed.");
@@ -28,8 +21,8 @@ const markAllAsRead = () => {
   const guilds = Object.keys(getGuilds());
   guilds.forEach((guildId) => markRead(guildId));
 
-  // Mark DMs if enabled
-  if (storage.includeDMs && getSortedPrivateChannels) {
+  // Mark DMs as read
+  if (getSortedPrivateChannels) {
     const dms = getSortedPrivateChannels();
     dms.forEach((dm) => markRead(dm.channel.id));
   }
@@ -40,7 +33,7 @@ const markAllAsRead = () => {
 // Inject button into sidebar
 const injectSidebarButton = () => {
   const TabBar = findByProps("tabBarItem", "tabBarContainer");
-  if (!TabBar) return;
+  if (!TabBar) return null;
 
   const SidebarButton = () => (
     <TouchableOpacity
@@ -49,10 +42,11 @@ const injectSidebarButton = () => {
         marginVertical: 5,
         borderRadius: 5,
         backgroundColor: "#7289DA",
+        alignItems: "center",
       }}
       onPress={markAllAsRead}
     >
-      <Text style={{ color: "white", fontWeight: "bold", textAlign: "center" }}>Mark All Read</Text>
+      <Text style={{ color: "white", fontWeight: "bold" }}>Mark All Read</Text>
     </TouchableOpacity>
   );
 
@@ -72,27 +66,12 @@ const injectSidebarButton = () => {
   };
 };
 
+// Load the plugin
 export const onLoad = () => {
-  registerSettings("mark-all-read-settings", SettingsPage);
-
-  // Register sidebar button patch
-  patches.push(injectSidebarButton());
-
-  // Register command
-  patches.push(
-    registerCommand({
-      name: "markallread",
-      displayName: "Mark All Read",
-      description: "Marks all messages as read.",
-      execute: () => {
-        markAllAsRead();
-        return { content: "All messages marked as read!" };
-      },
-    })
-  );
+  unpatch = injectSidebarButton();
 };
 
+// Unload the plugin
 export const onUnload = () => {
-  patches.forEach((unpatch) => unpatch?.());
-  patches = [];
+  if (unpatch) unpatch();
 };
