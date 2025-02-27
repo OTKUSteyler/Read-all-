@@ -1,11 +1,12 @@
 import { storage } from "@vendetta/plugin";
 import { registerSettings } from "@vendetta/settings";
 import { findByProps } from "@vendetta/metro";
-import { ReactNative } from "@vendetta/metro/common";
-import SettingsPage from "./Settings";
+import { after } from "@vendetta/patcher";
+import { ReactNative, React } from "@vendetta/metro/common";
+import SettingsPage from "./settings";
 
 // UI Components
-const { View, TouchableOpacity, Text, Alert } = ReactNative;
+const { View, TouchableOpacity, Text, Alert, StyleSheet } = ReactNative;
 
 // Ensure storage is initialized
 storage.readDMs = storage.readDMs ?? true;
@@ -13,6 +14,7 @@ storage.readDMs = storage.readDMs ?? true;
 // Fetch Discord's unread message functions
 const unreadStore = findByProps("getUnreadCount", "hasUnread");
 const readAllMessages = findByProps("ack", "ackCategory");
+const navigation = findByProps("NavigationContainer");
 
 // Check if functions exist
 if (!unreadStore || !readAllMessages) {
@@ -48,25 +50,49 @@ const markAllAsRead = () => {
 // UI Button Component
 const ReadAllButton = () => {
     return (
-        <View style={{ position: "absolute", top: 10, left: 10, zIndex: 100 }}>
-            <TouchableOpacity
-                style={{
-                    backgroundColor: "#7289DA",
-                    padding: 10,
-                    borderRadius: 5,
-                }}
-                onPress={markAllAsRead}
-            >
-                <Text style={{ color: "white", fontWeight: "bold" }}>Read All</Text>
+        <View style={styles.buttonContainer}>
+            <TouchableOpacity style={styles.button} onPress={markAllAsRead}>
+                <Text style={styles.buttonText}>Read All</Text>
             </TouchableOpacity>
         </View>
     );
 };
 
-// Register settings and add button
+// Styles for the button
+const styles = StyleSheet.create({
+    buttonContainer: {
+        position: "absolute",
+        top: 50,
+        left: 10,
+        zIndex: 100,
+    },
+    button: {
+        backgroundColor: "#7289DA",
+        padding: 10,
+        borderRadius: 5,
+    },
+    buttonText: {
+        color: "white",
+        fontWeight: "bold",
+    },
+});
+
+// Inject button into navigation UI
+let patch;
 export const onLoad = () => {
     registerSettings("read-all-settings", SettingsPage);
+
+    patch = after("render", navigation.default, (_, res) => {
+        if (!res) return res;
+        return (
+            <>
+                {res}
+                <ReadAllButton />
+            </>
+        );
+    });
 };
 
-export const onUnload = () => {};
-export default ReadAllButton;
+export const onUnload = () => {
+    if (patch) patch();
+};
