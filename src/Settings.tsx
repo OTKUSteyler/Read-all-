@@ -9,9 +9,7 @@ export default function SettingsPage() {
     <FormSwitch
       label="Mark DMs as Read"
       value={storage.includeDMs}
-      onValueChange={(value) => {
-        storage.includeDMs = value;
-      }}
+      onValueChange={(value) => (storage.includeDMs = value)}
     />
   );
 }
