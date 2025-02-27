@@ -1,72 +1,71 @@
-import { storage } from "@vendetta/plugin";
-import { registerSettings } from "@vendetta/settings";
+import { ReactNative, React } from "@vendetta/metro/common";
+import { after } from "@vendetta/patcher";
 import { findByProps } from "@vendetta/metro";
-import { ReactNative } from "@vendetta/metro/common";
-import SettingsPage from "./Settings";
+import { storage } from "@vendetta/plugin";
 
-// UI Components
-const { View, TouchableOpacity, Text, Alert } = ReactNative;
+const { View, TouchableOpacity, Text, StyleSheet } = ReactNative;
+const { markChannelRead } = findByProps("markChannelRead", "ack");
 
-// Ensure storage is initialized
-storage.readDMs = storage.readDMs ?? true;
+let unpatch: (() => void) | undefined;
 
-// Fetch Discord's unread message functions
-const unreadStore = findByProps("getUnreadCount", "hasUnread");
-const readAllMessages = findByProps("ack", "ackCategory");
-
-// Check if functions exist
-if (!unreadStore || !readAllMessages) {
-    console.error("[ReadAll] Missing required functions!");
-}
-
-// Function to mark all messages as read
-const markAllAsRead = () => {
-    if (!unreadStore || !readAllMessages) {
-        Alert.alert("Error", "Required functions are missing!");
-        return;
+// Function to mark all channels as read
+const markAllAsRead = async () => {
+  try {
+    const channels = findByProps("getMutableGuildChannels").getMutableGuildChannels();
+    
+    for (const guildId in channels) {
+      for (const channelId in channels[guildId]) {
+        await markChannelRead(channelId);
+      }
     }
 
-    // Get all unread guilds and DMs
-    const unreadGuilds = unreadStore.getUnreadGuilds();
-    const unreadDMs = unreadStore.getUnreadPrivateChannels();
-
-    // Mark all servers as read
-    for (const guildId of Object.keys(unreadGuilds)) {
-        readAllMessages.ack(guildId);
-    }
-
-    // Optionally mark DMs as read
-    if (storage.readDMs) {
-        for (const dmId of Object.keys(unreadDMs)) {
-            readAllMessages.ack(dmId);
-        }
-    }
-
-    Alert.alert("Success", "All unread messages marked as read!");
+    alert("All channels marked as read!");
+  } catch (error) {
+    console.error("Failed to mark all as read:", error);
+    alert("Error marking channels as read.");
+  }
 };
 
-// UI Button Component
+// Button Component
 const ReadAllButton = () => {
-    return (
-        <View style={{ position: "absolute", top: 10, left: 10, zIndex: 100 }}>
-            <TouchableOpacity
-                style={{
-                    backgroundColor: "#7289DA",
-                    padding: 10,
-                    borderRadius: 5,
-                }}
-                onPress={markAllAsRead}
-            >
-                <Text style={{ color: "white", fontWeight: "bold" }}>Read All</Text>
-            </TouchableOpacity>
-        </View>
-    );
+  return (
+    <View style={styles.buttonContainer}>
+      <TouchableOpacity style={styles.button} onPress={markAllAsRead}>
+        <Text style={styles.buttonText}>Mark All as Read</Text>
+      </TouchableOpacity>
+    </View>
+  );
 };
 
-// Register settings and add button
+// Patch the UI to add the button
 export const onLoad = () => {
-    registerSettings("read-all-settings", SettingsPage);
+  unpatch = after("default", findByProps("UnreadBadge"), (_args, res) => {
+    if (!res?.props?.children || !Array.isArray(res.props.children)) return res;
+    
+    res.props.children.unshift(<ReadAllButton key="read-all-button" />);
+    
+    return res;
+  });
 };
 
-export const onUnload = () => {};
-export default ReadAllButton;
+export const onUnload = () => {
+  if (unpatch) unpatch();
+};
+
+// Styles for the button
+const styles = StyleSheet.create({
+  buttonContainer: {
+    marginVertical: 5,
+    marginHorizontal: 10,
+  },
+  button: {
+    backgroundColor: "#7289DA",
+    padding: 10,
+    borderRadius: 5,
+    alignItems: "center",
+  },
+  buttonText: {
+    color: "#fff",
+    fontWeight: "bold",
+  },
+});
