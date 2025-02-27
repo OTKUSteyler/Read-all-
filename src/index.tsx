@@ -3,7 +3,7 @@ import { registerSettings } from "@vendetta/settings";
 import { findByProps } from "@vendetta/metro";
 import { after } from "@vendetta/patcher";
 import { ReactNative, React } from "@vendetta/metro/common";
-import SettingsPage from "./settings";
+import SettingsPage from "./Settings";
 
 // UI Components
 const { View, TouchableOpacity, Text, Alert, StyleSheet } = ReactNative;
