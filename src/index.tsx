@@ -1,110 +1,72 @@
-import { React, ReactNative } from "@vendetta/metro/common";
-import { findByProps, findByName } from "@vendetta/metro";
 import { storage } from "@vendetta/plugin";
 import { registerSettings } from "@vendetta/settings";
+import { findByProps } from "@vendetta/metro";
+import { ReactNative } from "@vendetta/metro/common";
 import SettingsPage from "./Settings";
 
-const { View, TouchableOpacity, Text, StyleSheet } = ReactNative;
+// UI Components
+const { View, TouchableOpacity, Text, Alert } = ReactNative;
 
-// Ensure default settings exist
-if (storage.markDMs === undefined) storage.markDMs = true;
+// Ensure storage is initialized
+storage.readDMs = storage.readDMs ?? true;
 
-// Get required Discord APIs
-const MessageStore = findByProps("ack", "markChannelRead");
-const GuildStore = findByProps("getGuilds");
-const ChannelStore = findByProps("getSortedPrivateChannels");
-const UnreadStore = findByProps("hasUnread");
+// Fetch Discord's unread message functions
+const unreadStore = findByProps("getUnreadCount", "hasUnread");
+const readAllMessages = findByProps("ack", "ackCategory");
 
-// **🔹 Function: Mark all messages as read**
+// Check if functions exist
+if (!unreadStore || !readAllMessages) {
+    console.error("[ReadAll] Missing required functions!");
+}
+
+// Function to mark all messages as read
 const markAllAsRead = () => {
-  if (!MessageStore?.markChannelRead) return;
-
-  let count = 0;
-
-  // **Mark all servers as read**
-  const guilds = GuildStore?.getGuilds();
-  if (guilds) {
-    Object.keys(guilds).forEach((guildId) => {
-      if (UnreadStore?.hasUnread(guildId)) {
-        MessageStore.markChannelRead(guildId);
-        count++;
-      }
-    });
-  }
-
-  // **Mark all DMs as read (if enabled)**
-  if (storage.markDMs) {
-    const dms = ChannelStore?.getSortedPrivateChannels();
-    if (dms) {
-      dms.forEach((dm) => {
-        if (UnreadStore?.hasUnread(dm.channel.id)) {
-          MessageStore.markChannelRead(dm.channel.id);
-          count++;
-        }
-      });
+    if (!unreadStore || !readAllMessages) {
+        Alert.alert("Error", "Required functions are missing!");
+        return;
     }
-  }
 
-  console.log(`[ReadAll] Marked ${count} channels as read.`);
+    // Get all unread guilds and DMs
+    const unreadGuilds = unreadStore.getUnreadGuilds();
+    const unreadDMs = unreadStore.getUnreadPrivateChannels();
+
+    // Mark all servers as read
+    for (const guildId of Object.keys(unreadGuilds)) {
+        readAllMessages.ack(guildId);
+    }
+
+    // Optionally mark DMs as read
+    if (storage.readDMs) {
+        for (const dmId of Object.keys(unreadDMs)) {
+            readAllMessages.ack(dmId);
+        }
+    }
+
+    Alert.alert("Success", "All unread messages marked as read!");
 };
 
-// **🔹 Inject Button into UI**
-let unpatch: (() => void) | null = null;
-
-const injectSidebarButton = () => {
-  const Sidebar = findByName("Guilds", false);
-
-  if (!Sidebar) {
-    console.error("[ReadAll] Failed to find Sidebar!");
-    return null;
-  }
-
-  const Button = () => (
-    <TouchableOpacity style={styles.button} onPress={markAllAsRead}>
-      <Text style={styles.text}>✔ Read All</Text>
-    </TouchableOpacity>
-  );
-
-  const OriginalSidebar = Sidebar.default;
-
-  function PatchedSidebar(props: any) {
+// UI Button Component
+const ReadAllButton = () => {
     return (
-      <View style={{ flexDirection: "column" }}>
-        <Button />
-        <OriginalSidebar {...props} />
-      </View>
+        <View style={{ position: "absolute", top: 10, left: 10, zIndex: 100 }}>
+            <TouchableOpacity
+                style={{
+                    backgroundColor: "#7289DA",
+                    padding: 10,
+                    borderRadius: 5,
+                }}
+                onPress={markAllAsRead}
+            >
+                <Text style={{ color: "white", fontWeight: "bold" }}>Read All</Text>
+            </TouchableOpacity>
+        </View>
     );
-  }
-
-  Sidebar.default = PatchedSidebar;
-
-  return () => {
-    Sidebar.default = OriginalSidebar;
-  };
 };
 
-// **🔹 Plugin Lifecycle**
+// Register settings and add button
 export const onLoad = () => {
-  registerSettings("read-all-settings", SettingsPage);
-  unpatch = injectSidebarButton();
+    registerSettings("read-all-settings", SettingsPage);
 };
 
-export const onUnload = () => {
-  if (unpatch) unpatch();
-};
-
-// **🔹 Styles**
-const styles = StyleSheet.create({
-  button: {
-    paddingVertical: 10,
-    marginHorizontal: 8,
-    backgroundColor: "#5865F2",
-    borderRadius: 6,
-    alignItems: "center",
-  },
-  text: {
-    color: "white",
-    fontWeight: "600",
-    fontSize: 14,
-  },
-});
+export const onUnload = () => {};
+export default ReadAllButton;
