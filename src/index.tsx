@@ -1,26 +1,35 @@
-import { React } from "@vendetta/metro/common";
+import { React, ReactNative } from "@vendetta/metro/common";
 import { findByProps } from "@vendetta/metro";
 import { storage } from "@vendetta/plugin";
 import { registerSettings } from "@vendetta/settings";
-import SettingsPage from "./Settings";
+import SettingsPage from "./settings";
 
-const { TouchableOpacity, Text, StyleSheet } = require("react-native");
+const { View, TouchableOpacity, Text, StyleSheet } = ReactNative;
 
 // Find Discord API methods
-const markRead = findByProps("ack", "markChannelRead")?.markChannelRead;
-const getGuilds = findByProps("getGuilds")?.getGuilds;
-const getSortedPrivateChannels = findByProps("getSortedPrivateChannels")?.getSortedPrivateChannels;
+const MessageStore = findByProps("ack", "markChannelRead");
+const GuildStore = findByProps("getGuilds");
+const ChannelStore = findByProps("getSortedPrivateChannels");
+
+// Ensure methods exist
+if (!MessageStore?.markChannelRead || !GuildStore?.getGuilds) {
+  console.error("[ReadAll] Missing required functions!");
+}
 
 // Function to mark all messages as read
 const markAllAsRead = () => {
-  if (!markRead || !getGuilds) return;
+  if (!MessageStore?.markChannelRead || !GuildStore?.getGuilds) return;
 
   // Mark all servers as read
-  Object.keys(getGuilds()).forEach((guildId) => markRead(guildId));
+  Object.keys(GuildStore.getGuilds()).forEach((guildId) => {
+    MessageStore.markChannelRead(guildId);
+  });
 
   // Mark DMs as read (if enabled in settings)
-  if (storage.markDMs && getSortedPrivateChannels) {
-    getSortedPrivateChannels().forEach((dm) => markRead(dm.channel.id));
+  if (storage.markDMs && ChannelStore?.getSortedPrivateChannels) {
+    ChannelStore.getSortedPrivateChannels().forEach((dm) => {
+      MessageStore.markChannelRead(dm.channel.id);
+    });
   }
 };
 
@@ -28,8 +37,12 @@ const markAllAsRead = () => {
 let unpatch: (() => void) | null = null;
 
 const injectTopBarButton = () => {
-  const TopBar = findByProps("TopTabBar", "tabBarContainer");
-  if (!TopBar) return null;
+  const NavigationBar = findByProps("NavBar", "topBar", "title");
+
+  if (!NavigationBar) {
+    console.error("[ReadAll] Failed to find Navigation Bar!");
+    return null;
+  }
 
   const Button = () => (
     <TouchableOpacity style={styles.button} onPress={markAllAsRead}>
@@ -37,19 +50,19 @@ const injectTopBarButton = () => {
     </TouchableOpacity>
   );
 
-  const originalRender = TopBar.TopTabBar;
-  TopBar.TopTabBar = function PatchedTopBar(props) {
+  const originalRender = NavigationBar.NavBar;
+  NavigationBar.NavBar = function PatchedNavBar(props) {
     const render = originalRender.apply(this, arguments);
     return (
-      <>
+      <View style={{ flexDirection: "row", alignItems: "center" }}>
         {render}
         <Button />
-      </>
+      </View>
     );
   };
 
   return () => {
-    TopBar.TopTabBar = originalRender;
+    NavigationBar.NavBar = originalRender;
   };
 };
 
@@ -67,7 +80,7 @@ export const onUnload = () => {
 const styles = StyleSheet.create({
   button: {
     padding: 8,
-    marginHorizontal: 10,
+    marginLeft: 10,
     backgroundColor: "#7289DA",
     borderRadius: 5,
   },
