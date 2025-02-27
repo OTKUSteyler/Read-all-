@@ -1,5 +1,5 @@
 import { React, ReactNative } from "@vendetta/metro/common";
-import { findByProps } from "@vendetta/metro";
+import { findByProps, findByName } from "@vendetta/metro";
 import { storage } from "@vendetta/plugin";
 import { registerSettings } from "@vendetta/settings";
 import SettingsPage from "./Settings";
@@ -13,20 +13,22 @@ if (storage.markDMs === undefined) storage.markDMs = true;
 const MessageStore = findByProps("ack", "markChannelRead");
 const GuildStore = findByProps("getGuilds");
 const ChannelStore = findByProps("getSortedPrivateChannels");
-
-if (!MessageStore || !MessageStore.markChannelRead) {
-  console.error("[ReadAll] Missing `markChannelRead` method!");
-}
+const UnreadStore = findByProps("hasUnread");
 
 // **🔹 Function: Mark all messages as read**
 const markAllAsRead = () => {
   if (!MessageStore?.markChannelRead) return;
 
+  let count = 0;
+
   // **Mark all servers as read**
   const guilds = GuildStore?.getGuilds();
   if (guilds) {
     Object.keys(guilds).forEach((guildId) => {
-      MessageStore.markChannelRead(guildId);
+      if (UnreadStore?.hasUnread(guildId)) {
+        MessageStore.markChannelRead(guildId);
+        count++;
+      }
     });
   }
 
@@ -35,20 +37,25 @@ const markAllAsRead = () => {
     const dms = ChannelStore?.getSortedPrivateChannels();
     if (dms) {
       dms.forEach((dm) => {
-        MessageStore.markChannelRead(dm.channel.id);
+        if (UnreadStore?.hasUnread(dm.channel.id)) {
+          MessageStore.markChannelRead(dm.channel.id);
+          count++;
+        }
       });
     }
   }
+
+  console.log(`[ReadAll] Marked ${count} channels as read.`);
 };
 
-// **🔹 Inject button into Discord UI**
+// **🔹 Inject Button into UI**
 let unpatch: (() => void) | null = null;
 
-const injectTopBarButton = () => {
-  const NavigationBar = findByProps("NavBar", "topBar", "title");
+const injectSidebarButton = () => {
+  const Sidebar = findByName("Guilds", false);
 
-  if (!NavigationBar) {
-    console.error("[ReadAll] Failed to find Navigation Bar!");
+  if (!Sidebar) {
+    console.error("[ReadAll] Failed to find Sidebar!");
     return null;
   }
 
@@ -58,45 +65,46 @@ const injectTopBarButton = () => {
     </TouchableOpacity>
   );
 
-  const OriginalNavBar = NavigationBar.NavBar;
+  const OriginalSidebar = Sidebar.default;
 
-  function PatchedNavBar(props: any) {
-    const render = OriginalNavBar(props);
+  function PatchedSidebar(props: any) {
     return (
-      <View style={{ flexDirection: "row", alignItems: "center" }}>
-        {render}
+      <View style={{ flexDirection: "column" }}>
         <Button />
+        <OriginalSidebar {...props} />
       </View>
     );
   }
 
-  NavigationBar.NavBar = PatchedNavBar;
+  Sidebar.default = PatchedSidebar;
 
   return () => {
-    NavigationBar.NavBar = OriginalNavBar;
+    Sidebar.default = OriginalSidebar;
   };
 };
 
 // **🔹 Plugin Lifecycle**
 export const onLoad = () => {
   registerSettings("read-all-settings", SettingsPage);
-  unpatch = injectTopBarButton();
+  unpatch = injectSidebarButton();
 };
 
 export const onUnload = () => {
   if (unpatch) unpatch();
 };
 
-// **🔹 Styles for Button**
+// **🔹 Styles**
 const styles = StyleSheet.create({
   button: {
-    padding: 8,
-    marginLeft: 10,
-    backgroundColor: "#7289DA",
-    borderRadius: 5,
+    paddingVertical: 10,
+    marginHorizontal: 8,
+    backgroundColor: "#5865F2",
+    borderRadius: 6,
+    alignItems: "center",
   },
   text: {
     color: "white",
-    fontWeight: "bold",
+    fontWeight: "600",
+    fontSize: 14,
   },
 });
