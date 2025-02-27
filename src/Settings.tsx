@@ -1,18 +1,22 @@
 import { storage } from "@vendetta/plugin";
-import { Forms } from "@vendetta/ui/components";
+import { useProxy } from "@vendetta/storage";
+import { ReactNative } from "@vendetta/metro/common";
+import { General } from "@vendetta/ui/components";
 
-const { FormSwitch } = Forms;
+const { View } = ReactNative;
+const { FormSwitchRow } = General;
 
-const SettingsPage = () => {
+export default function Settings() {
+    useProxy(storage);
+
     return (
-        <FormSwitch
-            label="Mark DMs as Read"
-            value={storage.readDMs}
-            onValueChange={(value) => {
-                storage.readDMs = value;
-            }}
-        />
+        <View>
+            <FormSwitchRow
+                label="Mark DMs as Read"
+                subLabel="If enabled, direct messages will also be marked as read."
+                value={storage.markDMs ?? true}
+                onValueChange={(value) => (storage.markDMs = value)}
+            />
+        </View>
     );
-};
-
-export default SettingsPage;
+}
