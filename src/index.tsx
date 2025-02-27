@@ -1,8 +1,10 @@
 import { after } from "@vendetta/patcher";
 import { React, ReactNative } from "@vendetta/metro/common";
 import { findByProps } from "@vendetta/metro";
-import "@vendetta/ui/styles"; // Ensures Vendetta supports custom styles
-import "./style.css"; // Import the CSS file
+import { storage } from "@vendetta/plugin";
+import { registerSettings } from "@vendetta/settings";
+import Settings from "./Settings";
+import "./style.css";
 
 const { View, TouchableOpacity, Text } = ReactNative;
 const UnreadStore = findByProps("markChannelRead");
@@ -15,8 +17,16 @@ const ReadAllButton = () => (
                 console.error("[ReadAll] markChannelRead is missing!");
                 return;
             }
+
             console.log("[ReadAll] Marking all as read...");
-            // Call markChannelRead function here for each unread channel
+            const channels = Object.keys(UnreadStore.getUnreadChannels());
+            channels.forEach((channel) => {
+                if (storage.markDMs || !UnreadStore.getChannel(channel).isDM) {
+                    UnreadStore.markChannelRead(channel);
+                }
+            });
+
+            console.log("[ReadAll] Marked all messages as read.");
         }}
     >
         <Text className="read-all-text">Read All</Text>
@@ -26,6 +36,7 @@ const ReadAllButton = () => (
 let unpatch;
 export const onLoad = () => {
     console.log("[ReadAll] Plugin is loading...");
+    registerSettings("readall-settings", Settings);
 
     try {
         unpatch = after("default", findByProps("UnreadBadge"), (_args, res) => {
