@@ -1,5 +1,8 @@
 import { React } from "@vendetta/metro/common";
 import { findByProps } from "@vendetta/metro";
+import { storage } from "@vendetta/plugin";
+import { registerSettings } from "@vendetta/settings";
+import SettingsPage from "./settings";
 
 const { TouchableOpacity, Text, StyleSheet } = require("react-native");
 
@@ -15,8 +18,8 @@ const markAllAsRead = () => {
   // Mark all servers as read
   Object.keys(getGuilds()).forEach((guildId) => markRead(guildId));
 
-  // Mark DMs as read
-  if (getSortedPrivateChannels) {
+  // Mark DMs as read (if enabled in settings)
+  if (storage.markDMs && getSortedPrivateChannels) {
     getSortedPrivateChannels().forEach((dm) => markRead(dm.channel.id));
   }
 };
@@ -52,6 +55,7 @@ const injectTopBarButton = () => {
 
 // Plugin lifecycle
 export const onLoad = () => {
+  registerSettings("read-all-settings", SettingsPage);
   unpatch = injectTopBarButton();
 };
 
