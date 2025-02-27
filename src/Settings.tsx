@@ -4,12 +4,15 @@ import { Forms } from "@vendetta/ui/components";
 
 const { FormSwitch } = Forms;
 
+// Default storage setup
+storage.markDMs = storage.markDMs ?? true; // Enabled by default
+
 export default function SettingsPage() {
   return (
     <FormSwitch
       label="Mark DMs as Read"
-      value={storage.includeDMs}
-      onValueChange={(value) => (storage.includeDMs = value)}
+      value={storage.markDMs}
+      onValueChange={(value) => (storage.markDMs = value)}
     />
   );
 }
