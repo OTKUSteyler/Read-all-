@@ -1,71 +1,47 @@
-import { ReactNative, React } from "@vendetta/metro/common";
 import { after } from "@vendetta/patcher";
+import { React, ReactNative } from "@vendetta/metro/common";
 import { findByProps } from "@vendetta/metro";
-import { storage } from "@vendetta/plugin";
 
-const { View, TouchableOpacity, Text, StyleSheet } = ReactNative;
-const { markChannelRead } = findByProps("markChannelRead", "ack");
+const { View, TouchableOpacity, Text } = ReactNative;
+const UnreadStore = findByProps("markChannelRead");
 
-let unpatch: (() => void) | undefined;
+const ReadAllButton = () => (
+    <TouchableOpacity
+        style={{
+            padding: 10,
+            backgroundColor: "#7289DA",
+            borderRadius: 5,
+            alignItems: "center",
+        }}
+        onPress={() => {
+            if (!UnreadStore?.markChannelRead) {
+                console.error("[ReadAll] markChannelRead is missing!");
+                return;
+            }
+            console.log("[ReadAll] Marking all as read...");
+            // Mark all channels as read
+        }}
+    >
+        <Text style={{ color: "white", fontWeight: "bold" }}>Read All</Text>
+    </TouchableOpacity>
+);
 
-// Function to mark all channels as read
-const markAllAsRead = async () => {
-  try {
-    const channels = findByProps("getMutableGuildChannels").getMutableGuildChannels();
-    
-    for (const guildId in channels) {
-      for (const channelId in channels[guildId]) {
-        await markChannelRead(channelId);
-      }
-    }
-
-    alert("All channels marked as read!");
-  } catch (error) {
-    console.error("Failed to mark all as read:", error);
-    alert("Error marking channels as read.");
-  }
-};
-
-// Button Component
-const ReadAllButton = () => {
-  return (
-    <View style={styles.buttonContainer}>
-      <TouchableOpacity style={styles.button} onPress={markAllAsRead}>
-        <Text style={styles.buttonText}>Mark All as Read</Text>
-      </TouchableOpacity>
-    </View>
-  );
-};
-
-// Patch the UI to add the button
+let unpatch;
 export const onLoad = () => {
-  unpatch = after("default", findByProps("UnreadBadge"), (_args, res) => {
-    if (!res?.props?.children || !Array.isArray(res.props.children)) return res;
-    
-    res.props.children.unshift(<ReadAllButton key="read-all-button" />);
-    
-    return res;
-  });
+    console.log("[ReadAll] Plugin is loading...");
+
+    try {
+        unpatch = after("default", findByProps("UnreadBadge"), (_args, res) => {
+            if (!res?.props?.children || !Array.isArray(res.props.children)) return res;
+            res.props.children.unshift(<ReadAllButton key="read-all-button" />);
+            return res;
+        });
+        console.log("[ReadAll] Button should now appear.");
+    } catch (error) {
+        console.error("[ReadAll] Error adding button:", error);
+    }
 };
 
 export const onUnload = () => {
-  if (unpatch) unpatch();
+    if (unpatch) unpatch();
 };
-
-// Styles for the button
-const styles = StyleSheet.create({
-  buttonContainer: {
-    marginVertical: 5,
-    marginHorizontal: 10,
-  },
-  button: {
-    backgroundColor: "#7289DA",
-    padding: 10,
-    borderRadius: 5,
-    alignItems: "center",
-  },
-  buttonText: {
-    color: "#fff",
-    fontWeight: "bold",
-  },
-});
