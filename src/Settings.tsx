@@ -1,21 +1,14 @@
-import { StyleSheet } from "react-native";
+import { storage } from '@vendetta/plugin';
+import { Forms } from '@vendetta/ui/components';
 
-export const styles = StyleSheet.create({
-    container: {
-        position: "absolute",
-        top: 50,
-        left: 10,
-        backgroundColor: "#7289DA",
-        padding: 10,
-        borderRadius: 5,
-    },
-    button: {
-        padding: 10,
-        backgroundColor: "#5865F2",
-        borderRadius: 5,
-    },
-    buttonText: {
-        color: "white",
-        fontWeight: "bold",
-    },
-});
+const { FormSwitch } = Forms;
+
+const SettingsPage = () => (
+    <FormSwitch
+        label="Mark DMs as Read"
+        value={storage.markDMs}
+        onValueChange={(value) => (storage.markDMs = value)}
+    />
+);
+
+export default SettingsPage;
