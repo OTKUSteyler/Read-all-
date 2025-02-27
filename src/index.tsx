@@ -2,7 +2,7 @@ import { React } from "@vendetta/metro/common";
 import { findByProps } from "@vendetta/metro";
 import { storage } from "@vendetta/plugin";
 import { registerSettings } from "@vendetta/settings";
-import SettingsPage from "./settings";
+import SettingsPage from "./Settings";
 
 const { TouchableOpacity, Text, StyleSheet } = require("react-native");
 
