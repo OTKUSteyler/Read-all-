@@ -1,7 +1,7 @@
 import { React } from "@vendetta/metro/common";
 import { storage } from "@vendetta/plugin";
-import { registerSettings } from "@vendetta/Settings";
-import SettingsPage from "./Settings";
+import { registerSettings } from "@vendetta/settings";
+import SettingsPage from "./settings";
 import { registerCommand } from "@vendetta/commands";
 import { findByProps } from "@vendetta/metro";
 import { View, TouchableOpacity, Text, Alert } from "react-native";
