@@ -6,17 +6,19 @@ import SettingsPage from "./Settings";
 
 const { View, TouchableOpacity, Text, StyleSheet } = ReactNative;
 
+// Ensure storage has default settings
+if (storage.markDMs === undefined) storage.markDMs = true;
+
 // Find Discord API methods
 const MessageStore = findByProps("ack", "markChannelRead");
 const GuildStore = findByProps("getGuilds");
 const ChannelStore = findByProps("getSortedPrivateChannels");
 
-// Ensure methods exist
 if (!MessageStore?.markChannelRead || !GuildStore?.getGuilds) {
   console.error("[ReadAll] Missing required functions!");
 }
 
-// Function to mark all messages as read
+// **🔹 Function: Mark all messages as read**
 const markAllAsRead = () => {
   if (!MessageStore?.markChannelRead || !GuildStore?.getGuilds) return;
 
@@ -33,7 +35,7 @@ const markAllAsRead = () => {
   }
 };
 
-// Inject button into top bar
+// **🔹 Inject button into Discord UI**
 let unpatch: (() => void) | null = null;
 
 const injectTopBarButton = () => {
@@ -50,23 +52,26 @@ const injectTopBarButton = () => {
     </TouchableOpacity>
   );
 
-  const originalRender = NavigationBar.NavBar;
-  NavigationBar.NavBar = function PatchedNavBar(props) {
-    const render = originalRender.apply(this, arguments);
+  const OriginalNavBar = NavigationBar.NavBar;
+
+  function PatchedNavBar(props: any) {
+    const render = OriginalNavBar(props);
     return (
       <View style={{ flexDirection: "row", alignItems: "center" }}>
         {render}
         <Button />
       </View>
     );
-  };
+  }
+
+  NavigationBar.NavBar = PatchedNavBar;
 
   return () => {
-    NavigationBar.NavBar = originalRender;
+    NavigationBar.NavBar = OriginalNavBar;
   };
 };
 
-// Plugin lifecycle
+// **🔹 Plugin Lifecycle**
 export const onLoad = () => {
   registerSettings("read-all-settings", SettingsPage);
   unpatch = injectTopBarButton();
@@ -76,7 +81,7 @@ export const onUnload = () => {
   if (unpatch) unpatch();
 };
 
-// Styles for the button
+// **🔹 Styles for Button**
 const styles = StyleSheet.create({
   button: {
     padding: 8,
