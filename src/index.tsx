@@ -3,8 +3,10 @@ import { storage } from "@vendetta/plugin";
 import { registerSettings } from "@vendetta/settings";
 import SettingsPage from "./settings";
 import { registerCommand } from "@vendetta/commands";
-import { findByProps } from "@vendetta/metro";
-import { View, TouchableOpacity, Text, Alert } from "react-native";
+import { findByProps, findByName } from "@vendetta/metro";
+
+// Import UI elements
+const { View, TouchableOpacity, Text, Alert } = require("react-native");
 
 // Find Discord API methods
 const markRead = findByProps("ack", "markChannelRead")?.markChannelRead;
@@ -35,24 +37,46 @@ const markAllAsRead = () => {
   Alert.alert("Success", "All messages marked as read!");
 };
 
-// Floating button component
-const MarkAllButton = () => (
-  <View style={{ position: "absolute", top: 40, left: 10, zIndex: 999 }}>
+// Inject button into sidebar
+const injectSidebarButton = () => {
+  const TabBar = findByProps("tabBarItem", "tabBarContainer");
+  if (!TabBar) return;
+
+  const SidebarButton = () => (
     <TouchableOpacity
       style={{
-        backgroundColor: "#7289DA",
         padding: 10,
+        marginVertical: 5,
         borderRadius: 5,
+        backgroundColor: "#7289DA",
       }}
       onPress={markAllAsRead}
     >
-      <Text style={{ color: "white", fontWeight: "bold" }}>Mark All Read</Text>
+      <Text style={{ color: "white", fontWeight: "bold", textAlign: "center" }}>Mark All Read</Text>
     </TouchableOpacity>
-  </View>
-);
+  );
+
+  const originalRender = TabBar.default;
+  TabBar.default = function PatchedTabBar(props) {
+    const render = originalRender.apply(this, arguments);
+    return (
+      <View>
+        {render}
+        <SidebarButton />
+      </View>
+    );
+  };
+
+  return () => {
+    TabBar.default = originalRender;
+  };
+};
 
 export const onLoad = () => {
   registerSettings("mark-all-read-settings", SettingsPage);
+
+  // Register sidebar button patch
+  patches.push(injectSidebarButton());
 
   // Register command
   patches.push(
@@ -69,6 +93,6 @@ export const onLoad = () => {
 };
 
 export const onUnload = () => {
-  patches.forEach((unpatch) => unpatch());
+  patches.forEach((unpatch) => unpatch?.());
   patches = [];
 };
