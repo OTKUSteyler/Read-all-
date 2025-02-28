@@ -1,14 +1,14 @@
 import { React, ReactNative } from "@vendetta/metro/common";
-import { findByProps, findByName } from "@vendetta/metro";
+import { findByProps } from "@vendetta/metro";
 import { after } from "@vendetta/patcher";
 import { logger } from "@vendetta";
 
 // UI Components
 const { View, TouchableOpacity, Text, StyleSheet } = ReactNative;
 
-// Find the correct Guilds Component
+// Get the Guilds Component
 const Guilds = findByProps("Guilds", "UnreadBadges");
-const ChannelStore = findByProps("getUnreadCount", "getLastMessageId");
+const ChannelStore = findByProps("getUnreadCount", "getLastMessageId", "getMutableGuildChannels");
 const SelectedGuildStore = findByProps("getLastSelectedGuildId");
 
 if (!Guilds) {
@@ -42,7 +42,6 @@ export const onLoad = () => {
 
     if (!Guilds) return;
 
-    // Patch the Guilds UI to add the button
     unpatch = after("default", Guilds, ([props], res) => {
         logger.log("✅ Guilds UI patched!");
 
