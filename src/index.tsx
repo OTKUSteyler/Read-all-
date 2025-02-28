@@ -38,12 +38,16 @@ const MarkAllReadButton = () => {
       return;
     }
 
+    console.log("Filtered Messages: ", filteredMessages); // Debug log
+
     // Mark non-excluded messages as read
     if (flux.actions.markRead) {
+      console.log("MarkRead function exists.");
       flux.actions.markRead(filteredMessages.map((msg) => msg.id));
-      setAllRead(true);
+      setAllRead(true); // Change state to show all read
       showToast("✅ Marked all messages as read!", ToastType.SUCCESS);
     } else {
+      console.log("❌ Error: markRead action not found.");
       showToast("❌ Error: markRead action not found.", ToastType.FAILURE);
     }
   };
