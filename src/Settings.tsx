@@ -1,17 +1,33 @@
-import { storage } from "@vendetta/plugin";
-import { useProxy } from "@vendetta/storage";
-import { Forms } from "@vendetta/ui/components";
+import { React, useState } from "react";
+import { View, ScrollView } from "react-native";
+import { Text, TextInput, Button } from "@vendetta/ui/components";
+import { storage } from "@vendetta/api";
+import styles from "./style"; // Import styles
 
-export default function Settings() {
-    useProxy(storage);
+const Settings = () => {
+  // Load excluded users from storage
+  const [excluded, setExcluded] = useState(storage.get("excludedUsers", []).join(", "));
 
-    return (
-        <Forms.FormSection title="Read All Settings">
-            <Forms.FormSwitch
-                label="Enable for DMs"
-                value={storage.markDMs ?? true}
-                onValueChange={(value) => (storage.markDMs = value)}
-            />
-        </Forms.FormSection>
-    );
-}
+  const handleExcludedChange = (value) => {
+    const users = value.split(",").map((user) => user.trim());
+    setExcluded(value);
+    storage.set("excludedUsers", users);
+  };
+
+  return (
+    <ScrollView style={styles.container}>
+      <Text>Enter user IDs to exclude from "Mark All as Read":</Text>
+      <TextInput
+        style={styles.input}
+        value={excluded}
+        onChange={handleExcludedChange}
+        placeholder="123456, 7891011"
+      />
+      <Button style={styles.button} onPress={() => storage.set("excludedUsers", [])}>
+        Clear Exclusions
+      </Button>
+    </ScrollView>
+  );
+};
+
+export default Settings;
