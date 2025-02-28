@@ -2,13 +2,14 @@ import { React } from "@vendetta";
 import { Forms } from "@vendetta/ui/components";
 import { storage } from "@vendetta/plugin";
 
-// Settings page
-export default function Settings() {
-  // Get the currently excluded users (if any)
-  const excludedUsers = storage.get("excludedUsers", []);
+// Debugging: Check initial excluded users
+console.log("Initial excluded users:", storage.get("excludedUsers"));
 
+export default function Settings() {
+  const excludedUsers = storage.get("excludedUsers", []);
+  
   const handleChange = (value: string) => {
-    // Save comma-separated values as an array in storage
+    console.log("Updated excluded users:", value);
     storage.set("excludedUsers", value.split(",").map((id) => id.trim()));
   };
 
