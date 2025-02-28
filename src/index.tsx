@@ -1,15 +1,18 @@
-import { React, useState } from "react";
+import { React, useState, useEffect } from "react";
 import { Button } from "@vendetta/ui/components";
 import { flux, storage } from "@vendetta/api";
 import { showToast, ToastType } from "@vendetta/ui/toasts";
-import Settings from "./Settings"; // Import settings
-import styles from "./style"; // Import your styles
+import Settings from "./Settings"; // Import settings page
+import styles from "./style"; // Import styles
 
-// Initialize excluded users in storage if not already present
-if (!storage.get("excludedUsers")) {
-  storage.set("excludedUsers", []);
-}
+// Initialize excluded users if not set already
+useEffect(() => {
+  if (!storage.get("excludedUsers")) {
+    storage.set("excludedUsers", []);
+  }
+}, []);
 
+// Main Mark All Read Button
 const MarkAllReadButton = () => {
   const [allRead, setAllRead] = useState(false);
   const excludedUsers = storage.get("excludedUsers", []);
@@ -47,7 +50,7 @@ const MarkAllReadButton = () => {
 
   return (
     <Button
-      style={styles.button} // Apply your styles here
+      style={styles.button} // Apply button style from styles.ts
       onClick={handleMarkAllRead}
       size={Button.Sizes.SMALL}
       disabled={allRead}
@@ -57,10 +60,9 @@ const MarkAllReadButton = () => {
   );
 };
 
-// Export the plugin settings and button
 export default {
   onLoad: () => console.log("✅ Read All Messages Plugin Loaded!"),
   onUnload: () => console.log("🛑 Plugin Unloaded!"),
-  settings: Settings, // Expose the settings page
-  render: MarkAllReadButton, // This adds the button to the UI
+  settings: Settings, // Expose settings
+  render: MarkAllReadButton, // Render button in the UI
 };
