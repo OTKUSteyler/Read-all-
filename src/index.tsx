@@ -1,11 +1,13 @@
-import { React } from "@vendetta";
+import { React, useState } from "@vendetta";
 import { Button } from "@vendetta/ui/components";
 import { showToast, ToastType } from "@vendetta/ui/toasts";
 import { findByProps, after } from "@vendetta/metro";
+import { storage } from "@vendetta/plugin"; // For settings handling
+import Settings from "./Settings"; // Import the settings page
 
 // Find necessary stores
-const UnreadStore = findByProps("getUnreadGuilds");
-const MessagesStore = findByProps("markRead");
+const UnreadStore = findByProps("getUnreadGuilds"); // Store for unread guilds
+const MessagesStore = findByProps("markRead");     // Store to mark messages as read
 
 // Handle Mark All as Read button click
 const handleMarkAllRead = () => {
@@ -44,7 +46,11 @@ const patch = after("render", Channels, ([props], res) => {
 export default {
   onLoad: () => {
     console.log("✅ Read All Messages Plugin Loaded!");
-    patch();
+    patch(); // Inject the button when the plugin loads
   },
-  onUnload: () => patch?.(),
+  onUnload: () => {
+    console.log("❌ Read All Messages Plugin Unloaded!");
+    patch?.(); // Unpatch the button when the plugin unloads
+  },
+  settings: Settings, // Link the settings page to the plugin
 };
