@@ -1,38 +1,39 @@
 import { React, useState, useEffect } from 'react';
-import { Button } from '@vendetta/ui/components'; // Vendetta's Button component
-import { flux } from '@vendetta/api'; // Vendetta's flux API
-import { useChannelStore } from '@vendetta/store'; // Vendetta's store to access channel information
+import { Button } from '@vendetta/ui/components';
+import { flux } from '@vendetta/api';
+import { showToast } from '@vendetta/ui/toasts'; // Import showToast
 
-// Main component for the "Mark All as Read" button
 const MarkAllReadButton = () => {
-  const [allRead, setAllRead] = useState(false); // State to track button status (all read or not)
+  const [allRead, setAllRead] = useState(false);
 
-  // Function to handle the button click event (mark all notifications as read)
   const handleMarkAllRead = () => {
-    flux.actions.markAllNotificationsAsRead(); // Call Flux action to mark all notifications as read
-    setAllRead(true); // Change the button text to "All Read"
+    console.log("Mark All as Read Button Clicked");
+    flux.actions.markAllNotificationsAsRead(); // Mark all notifications as read
+    setAllRead(true);
+
+    // Show toast notification
+    showToast("All notifications marked as read!", ToastType.SUCCESS);
   };
 
-  // Use effect hook to reset the button state if there are unread messages
   useEffect(() => {
+    console.log("useEffect Hook Ran");
     const interval = setInterval(() => {
-      // Check if there are unread notifications in the store (or customize this check)
-      const unreadMessages = flux.store.getState().notifications.unread; // Example of how to get unread messages count
+      const unreadMessages = flux.store.getState().notifications.unread;
+      console.log("Checking unread messages:", unreadMessages);
       if (unreadMessages > 0) {
-        setAllRead(false); // Reset the button to "Mark All as Read" if there are unread messages
+        setAllRead(false);
       }
-    }, 1000); // Check for unread messages every second
+    }, 1000);
 
-    return () => clearInterval(interval); // Cleanup the interval on unmount
+    return () => {
+      clearInterval(interval);
+      console.log("useEffect Cleanup");
+    };
   }, []);
 
   return (
-    <Button
-      onClick={handleMarkAllRead} // Button click handler
-      size={Button.Sizes.SMALL} // Button size
-      disabled={allRead} // Disable the button when all messages are read
-    >
-      {allRead ? "All Read" : "Mark All as Read"} {/* Toggle text based on button state */}
+    <Button onClick={handleMarkAllRead} size={Button.Sizes.SMALL} disabled={allRead}>
+      {allRead ? "All Read" : "Mark All as Read"}
     </Button>
   );
 };
