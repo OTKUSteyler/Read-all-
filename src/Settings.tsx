@@ -11,7 +11,7 @@ const Settings = () => {
       excludedUsers.push(excludedUser);
       storage.set("excludedUsers", excludedUsers);
       console.log("Saved excluded user:", excludedUser);
-      setExcludedUser(""); // Reset input
+      setExcludedUser(""); // Reset the input field after saving
     }
   };
 
