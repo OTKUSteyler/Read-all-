@@ -1,32 +1,29 @@
 import { React, useState } from "react";
-import { View, ScrollView } from "react-native";
-import { Text, TextInput, Button } from "@vendetta/ui/components";
+import { TextInput, Button } from "@vendetta/ui/components";
 import { storage } from "@vendetta/api";
-import styles from "./style"; // Import styles
 
 const Settings = () => {
-  // Load excluded users from storage
-  const [excluded, setExcluded] = useState(storage.get("excludedUsers", []).join(", "));
+  const [excludedUser, setExcludedUser] = useState("");
 
-  const handleExcludedChange = (value) => {
-    const users = value.split(",").map((user) => user.trim());
-    setExcluded(value);
-    storage.set("excludedUsers", users);
+  const saveUser = () => {
+    let excludedUsers = storage.get("excludedUsers", []);
+    if (excludedUser && !excludedUsers.includes(excludedUser)) {
+      excludedUsers.push(excludedUser);
+      storage.set("excludedUsers", excludedUsers);
+      console.log("Saved excluded user:", excludedUser);
+      setExcludedUser(""); // Reset input
+    }
   };
 
   return (
-    <ScrollView style={styles.container}>
-      <Text>Enter user IDs to exclude from "Mark All as Read":</Text>
+    <>
       <TextInput
-        style={styles.input}
-        value={excluded}
-        onChange={handleExcludedChange}
-        placeholder="123456, 7891011"
+        label="Exclude User ID"
+        value={excludedUser}
+        onChange={setExcludedUser}
       />
-      <Button style={styles.button} onPress={() => storage.set("excludedUsers", [])}>
-        Clear Exclusions
-      </Button>
-    </ScrollView>
+      <Button onClick={saveUser}>Save Excluded User</Button>
+    </>
   );
 };
 
