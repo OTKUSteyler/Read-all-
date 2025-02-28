@@ -1,12 +1,13 @@
-import { React, useState } from "@vendetta";
+import { React } from "@vendetta";
 import { Button } from "@vendetta/ui/components";
 import { showToast, ToastType } from "@vendetta/ui/toasts";
 import { findByProps, after } from "@vendetta/metro";
 
-// Get the stores for unread guilds and mark read functionality
+// Find the relevant stores
 const UnreadStore = findByProps("getUnreadGuilds");
 const MessagesStore = findByProps("markRead");
 
+// Function to handle button click
 const handleMarkAllRead = () => {
   const unreadGuilds = UnreadStore?.getUnreadGuilds?.() || [];
   if (unreadGuilds.length === 0) {
@@ -18,11 +19,12 @@ const handleMarkAllRead = () => {
   showToast("Marked all messages as read!", ToastType.SUCCESS);
 };
 
+// Mark All Read Button Component
 const MarkAllReadButton = () => (
   <Button onClick={handleMarkAllRead}>Mark All as Read</Button>
 );
 
-// Patch the ChannelItem component to inject the button
+// Inject the button into ChannelItem (This is a test injection)
 const ChannelItem = findByProps("ChannelItem");
 
 const patch = after("render", ChannelItem, ([props], res) => {
@@ -33,10 +35,10 @@ const patch = after("render", ChannelItem, ([props], res) => {
 export default {
   onLoad: () => {
     console.log("Plugin Loaded!");
-    patch();  // Inject the button when the plugin loads
+    patch(); // Inject button when plugin loads
   },
   onUnload: () => {
     console.log("Plugin Unloaded!");
-    patch?.(); // Unpatch the button on plugin unload
+    patch?.(); // Unpatch button when plugin unloads
   },
 };
