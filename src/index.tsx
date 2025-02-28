@@ -1,37 +1,54 @@
 import { React } from "@vendetta";
 import { Button } from "@vendetta/ui/components";
 import { showToast, ToastType } from "@vendetta/ui/toasts";
+import { storage } from "@vendetta/plugin";
 import { after } from "@vendetta/patcher";
 import { findByProps } from "@vendetta/metro";
+import Settings from "./Settings";
 
-// Get unread messages & mark read functions
+// Discord API methods
 const UnreadStore = findByProps("getUnreadGuilds");
 const MessagesStore = findByProps("markRead");
 
-// Button to mark all messages as read
-const MarkAllReadButton = () => {
-  const handleMarkAllRead = () => {
-    console.log("📩 Mark All as Read button clicked.");
-    const unreadGuilds = UnreadStore?.getUnreadGuilds?.() || [];
-    
-    if (!unreadGuilds.length) {
-      showToast("No unread messages.", ToastType.INFO);
-      return;
-    }
+// Ensure storage has excluded users
+if (!storage.get("excludedUsers")) {
+  storage.set("excludedUsers", []);
+}
 
-    console.log("✅ Marking messages as read:", unreadGuilds);
-    MessagesStore.markRead(unreadGuilds);
-    showToast("✅ Marked all messages as read!", ToastType.SUCCESS);
-  };
+// Function to mark all messages as read
+const handleMarkAllRead = () => {
+  console.log("📩 Mark All as Read button clicked.");
 
-  return (
-    <Button onClick={handleMarkAllRead} style={{ padding: 10, backgroundColor: "blue", color: "white" }}>
-      📩 Mark All as Read
-    </Button>
+  // Get unread messages
+  const unreadGuilds = UnreadStore?.getUnreadGuilds?.() || [];
+  const excludedUsers = storage.get("excludedUsers", []);
+
+  // Filter out excluded users
+  const filteredGuilds = unreadGuilds.filter(
+    (guildId) => !excludedUsers.includes(guildId)
   );
+
+  if (filteredGuilds.length === 0) {
+    showToast("All unread messages are from excluded users.", ToastType.INFO);
+    return;
+  }
+
+  console.log("✅ Marking these as read:", filteredGuilds);
+
+  // Mark each as read
+  MessagesStore.markRead(filteredGuilds);
+
+  showToast("✅ Marked all messages as read!", ToastType.SUCCESS);
 };
 
-// Inject button into the UI
+// Button component
+const MarkAllReadButton = () => (
+  <Button onClick={handleMarkAllRead} style={{ padding: 10, backgroundColor: "blue", color: "white" }}>
+    📩 Mark All as Read
+  </Button>
+);
+
+// Inject into UI
 const Channels = findByProps("ChannelItem");
 const patch = after("render", Channels, ([props], res) => {
   if (!res?.props?.children) return res;
@@ -46,4 +63,5 @@ export default {
     patch();
   },
   onUnload: () => patch?.(),
+  settings: Settings,
 };
