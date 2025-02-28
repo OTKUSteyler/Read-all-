@@ -9,6 +9,7 @@ const MessagesStore = findByProps("markRead");
 const handleMarkAllRead = () => {
   console.log("📩 Mark All as Read button clicked.");
 
+  // Get unread messages
   const unreadGuilds = UnreadStore?.getUnreadGuilds?.() || [];
   if (unreadGuilds.length === 0) {
     showToast("No unread messages found!", ToastType.INFO);
@@ -27,11 +28,10 @@ const MarkAllReadButton = () => (
   </Button>
 );
 
-// Injecting the button into the chat UI
 const Channels = findByProps("ChannelItem");
+
 const patch = after("render", Channels, ([props], res) => {
   if (!res?.props?.children) return res;
-  console.log("🔵 Injecting MarkAllReadButton...");
   res.props.children.push(<MarkAllReadButton />);
   return res;
 });
