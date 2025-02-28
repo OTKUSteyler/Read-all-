@@ -45,6 +45,9 @@ const MarkAllReadButton = () => {
     }
   };
 
+  // Add log to verify the button rendering
+  console.log("Rendering MarkAllReadButton Component");
+
   return (
     <Button
       style={styles.button} // Apply your styles here
