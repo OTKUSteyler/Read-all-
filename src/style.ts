@@ -1,18 +1,12 @@
-import { StyleSheet } from "react-native";
+import { StyleSheet } from "@vendetta/ui";
 
 export default StyleSheet.create({
-  container: {
-    padding: 10,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 5,
-    padding: 10,
-    marginBottom: 10,
-  },
   button: {
     marginTop: 10,
     padding: 10,
+    backgroundColor: "#4CAF50", // Green color for success
+    borderRadius: 5,
+    color: "white", // Text color
+    width: "100%", // Full width of the parent container
   },
 });
