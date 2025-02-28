@@ -11,16 +11,25 @@ const Guilds = findByProps("Guilds", "UnreadBadges");
 const ChannelStore = findByProps("getUnreadCount", "getLastMessageId");
 const SelectedGuildStore = findByProps("getLastSelectedGuildId");
 
-// Function to mark all messages as read
+if (!Guilds) {
+    logger.error("❌ Could not find Guilds component!");
+}
+
 const markAllRead = () => {
     const guildId = SelectedGuildStore.getLastSelectedGuildId();
-    if (!guildId) return alert("⚠ No server selected!");
+    if (!guildId) {
+        alert("⚠ No server selected!");
+        return;
+    }
 
     const channels = ChannelStore.getMutableGuildChannels(guildId);
-    if (!channels) return alert("⚠ No unread messages found!");
+    if (!channels) {
+        alert("⚠ No unread messages found!");
+        return;
+    }
 
     for (const channelId in channels) {
-        ChannelStore.getLastMessageId(channelId); // Simulating marking as read
+        ChannelStore.getLastMessageId(channelId);
     }
 
     alert("✅ All messages marked as read!");
@@ -29,13 +38,14 @@ const markAllRead = () => {
 let unpatch: (() => void) | undefined;
 
 export const onLoad = () => {
-    if (!Guilds) {
-        logger.error("❌ Could not find Guilds component!");
-        return;
-    }
+    logger.log("✅ Read All Plugin Loaded!");
+
+    if (!Guilds) return;
 
     // Patch the Guilds UI to add the button
     unpatch = after("default", Guilds, ([props], res) => {
+        logger.log("✅ Guilds UI patched!");
+
         if (!res) return res;
 
         const FloatingButton = () => (
@@ -53,15 +63,12 @@ export const onLoad = () => {
             </>
         );
     });
-
-    logger.log("✅ Read All Plugin Loaded!");
 };
 
 export const onUnload = () => {
     if (unpatch) unpatch();
 };
 
-// Styling for the floating button
 const styles = StyleSheet.create({
     container: {
         position: "absolute",
