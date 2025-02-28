@@ -2,7 +2,11 @@ import { React, useState } from "react";
 import { Button } from "@vendetta/ui/components";
 import { flux, storage } from "@vendetta/api";
 import { showToast } from "@vendetta/ui/toasts";
-import Settings from "./Settings"; // Import the new settings page
+import Settings from "./settings"; // Ensure this points to the correct path of settings.tsx
+import styles from "./style"; // Ensure this points to the correct path of style.ts
+
+// Load stored excluded users (or default to an empty list)
+if (!storage.get("excludedUsers")) storage.set("excludedUsers", []);
 
 const MarkAllReadButton = () => {
   const [allRead, setAllRead] = useState(false);
@@ -11,6 +15,7 @@ const MarkAllReadButton = () => {
   const handleMarkAllRead = () => {
     console.log("📩 Mark All as Read Button Clicked");
 
+    // Get unread messages from Flux store
     const unreadMessages = flux.store.getState().messages?.unread || [];
 
     if (unreadMessages.length === 0) {
@@ -18,13 +23,17 @@ const MarkAllReadButton = () => {
       return;
     }
 
-    const filteredMessages = unreadMessages.filter((msg) => !excludedUsers.includes(msg.author?.id));
+    // Filter messages from excluded users
+    const filteredMessages = unreadMessages.filter(
+      (msg) => !excludedUsers.includes(msg.author?.id)
+    );
 
     if (filteredMessages.length === 0) {
       showToast("All unread messages are from excluded users.", ToastType.INFO);
       return;
     }
 
+    // Mark non-excluded messages as read
     if (flux.actions.markRead) {
       flux.actions.markRead(filteredMessages.map((msg) => msg.id));
       setAllRead(true);
@@ -35,7 +44,12 @@ const MarkAllReadButton = () => {
   };
 
   return (
-    <Button onClick={handleMarkAllRead} size={Button.Sizes.SMALL} disabled={allRead}>
+    <Button
+      style={styles.button} // Apply styles here
+      onClick={handleMarkAllRead}
+      size={Button.Sizes.SMALL}
+      disabled={allRead}
+    >
       {allRead ? "✅ All Read" : "📩 Mark All as Read"}
     </Button>
   );
@@ -45,6 +59,6 @@ const MarkAllReadButton = () => {
 export default {
   onLoad: () => console.log("✅ Read All Messages Plugin Loaded!"),
   onUnload: () => console.log("🛑 Plugin Unloaded!"),
-  settings: Settings, // Now correctly references the settings page
-  render: MarkAllReadButton, // Adds button to UI
+  settings: Settings, // This exposes the settings page
+  render: MarkAllReadButton, // This adds the button to the UI
 };
