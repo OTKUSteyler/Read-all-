@@ -1,34 +1,30 @@
-import { React, useState, useEffect } from "react";
+import { React, flux, storage } from "@vendetta";
 import { Button } from "@vendetta/ui/components";
-import { flux, storage } from "@vendetta/api";
 import { showToast, ToastType } from "@vendetta/ui/toasts";
 import Settings from "./Settings"; // Import settings page
 import styles from "./style"; // Import styles
 
-// Initialize excluded users if not set already
-useEffect(() => {
-  if (!storage.get("excludedUsers")) {
-    storage.set("excludedUsers", []);
-  }
-}, []);
+// Ensure excludedUsers storage exists
+if (!storage.get("excludedUsers")) {
+  storage.set("excludedUsers", []);
+}
 
-// Main Mark All Read Button
+// Main Read All Messages button component
 const MarkAllReadButton = () => {
-  const [allRead, setAllRead] = useState(false);
   const excludedUsers = storage.get("excludedUsers", []);
-
+  
   const handleMarkAllRead = () => {
-    console.log("📩 Mark All as Read Button Clicked");
+    console.log("📩 Mark All as Read button clicked.");
 
     // Get unread messages from Flux store
     const unreadMessages = flux.store.getState().messages?.unread || [];
-
+    
     if (unreadMessages.length === 0) {
       showToast("No unread messages found.", ToastType.INFO);
       return;
     }
 
-    // Filter messages from excluded users
+    // Filter out messages from excluded users
     const filteredMessages = unreadMessages.filter(
       (msg) => !excludedUsers.includes(msg.author?.id)
     );
@@ -38,35 +34,29 @@ const MarkAllReadButton = () => {
       return;
     }
 
-    console.log("Filtered Messages: ", filteredMessages); // Debug log
+    console.log("✅ Marking messages as read:", filteredMessages);
 
-    // Mark non-excluded messages as read
+    // Use Flux action to mark as read
     if (flux.actions.markRead) {
-      console.log("MarkRead function exists.");
       flux.actions.markRead(filteredMessages.map((msg) => msg.id));
-      setAllRead(true); // Change state to show all read
       showToast("✅ Marked all messages as read!", ToastType.SUCCESS);
     } else {
-      console.log("❌ Error: markRead action not found.");
-      showToast("❌ Error: markRead action not found.", ToastType.FAILURE);
+      console.error("❌ Flux action `markRead` not found.");
+      showToast("❌ Error: Cannot mark messages as read.", ToastType.FAILURE);
     }
   };
 
   return (
-    <Button
-      style={styles.button} // Apply button style from styles.ts
-      onClick={handleMarkAllRead}
-      size={Button.Sizes.SMALL}
-      disabled={allRead}
-    >
-      {allRead ? "✅ All Read" : "📩 Mark All as Read"}
+    <Button style={styles.button} onClick={handleMarkAllRead}>
+      📩 Mark All as Read
     </Button>
   );
 };
 
+// Plugin setup
 export default {
   onLoad: () => console.log("✅ Read All Messages Plugin Loaded!"),
   onUnload: () => console.log("🛑 Plugin Unloaded!"),
-  settings: Settings, // Expose settings
-  render: MarkAllReadButton, // Render button in the UI
+  settings: Settings, // Plugin settings page
+  render: MarkAllReadButton, // Render button in UI
 };
