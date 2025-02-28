@@ -1,30 +1,40 @@
-import { React, useEffect } from '@vendetta/metro/common';
-import { Button } from '@vendetta/ui/components';
-import { flux } from '@vendetta/api/flux';
+import { React, useState, useEffect } from 'react';
+import { Button } from '@vendetta/ui/components'; // Vendetta's Button component
+import { flux } from '@vendetta/api'; // Vendetta's flux API
+import { useChannelStore } from '@vendetta/store'; // Vendetta's store to access channel information
 
-export default function InjectMarkAllReadButton() {
-  useEffect(() => {
-    // Use Vendetta API to add the button to the Discord UI
-    const interval = setInterval(() => {
-      const notificationPanel = document.querySelector('.notifications-class'); // Find where notifications are listed
-      
-      if (notificationPanel) {
-        // Assuming you add the button inside the notification panel
-        const button = document.createElement('div');
-        button.innerHTML = `
-          <button onclick="markAllRead()" style="padding: 10px; background-color: #4CAF50; color: white; border: none;">Mark All as Read</button>
-        `;
-        
-        notificationPanel.appendChild(button);
-        clearInterval(interval); // Stop checking after the button is added
-      }
-    }, 1000); // Try every second until the panel is found
-  }, []);
+// Main component for the "Mark All as Read" button
+const MarkAllReadButton = () => {
+  const [allRead, setAllRead] = useState(false); // State to track button status (all read or not)
 
-  // Mark All as Read logic
-  const markAllRead = () => {
-    flux.actions.markAllNotificationsAsRead();
+  // Function to handle the button click event (mark all notifications as read)
+  const handleMarkAllRead = () => {
+    flux.actions.markAllNotificationsAsRead(); // Call Flux action to mark all notifications as read
+    setAllRead(true); // Change the button text to "All Read"
   };
 
-  return null; // This is an injected button, no need for a render function here
-}
+  // Use effect hook to reset the button state if there are unread messages
+  useEffect(() => {
+    const interval = setInterval(() => {
+      // Check if there are unread notifications in the store (or customize this check)
+      const unreadMessages = flux.store.getState().notifications.unread; // Example of how to get unread messages count
+      if (unreadMessages > 0) {
+        setAllRead(false); // Reset the button to "Mark All as Read" if there are unread messages
+      }
+    }, 1000); // Check for unread messages every second
+
+    return () => clearInterval(interval); // Cleanup the interval on unmount
+  }, []);
+
+  return (
+    <Button
+      onClick={handleMarkAllRead} // Button click handler
+      size={Button.Sizes.SMALL} // Button size
+      disabled={allRead} // Disable the button when all messages are read
+    >
+      {allRead ? "All Read" : "Mark All as Read"} {/* Toggle text based on button state */}
+    </Button>
+  );
+};
+
+export default MarkAllReadButton;
