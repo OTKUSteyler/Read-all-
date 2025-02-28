@@ -1,28 +1,29 @@
 import { React, ReactNative } from "@vendetta/metro/common";
+import { findByProps, findByName } from "@vendetta/metro";
 import { after } from "@vendetta/patcher";
-import { findByName, findByProps } from "@vendetta/metro";
 import { logger } from "@vendetta";
 
+// UI Components
 const { View, TouchableOpacity, Text, StyleSheet } = ReactNative;
 
-// Find the component responsible for rendering the Guild List
-const Guilds = findByName("Guilds", false);
+// Find the correct Guilds Component
+const Guilds = findByProps("Guilds", "UnreadBadges");
 const ChannelStore = findByProps("getUnreadCount", "getLastMessageId");
 const SelectedGuildStore = findByProps("getLastSelectedGuildId");
 
 // Function to mark all messages as read
 const markAllRead = () => {
     const guildId = SelectedGuildStore.getLastSelectedGuildId();
-    if (!guildId) return alert("No server selected!");
+    if (!guildId) return alert("⚠ No server selected!");
 
     const channels = ChannelStore.getMutableGuildChannels(guildId);
-    if (!channels) return alert("No channels found!");
+    if (!channels) return alert("⚠ No unread messages found!");
 
     for (const channelId in channels) {
         ChannelStore.getLastMessageId(channelId); // Simulating marking as read
     }
 
-    alert("✔ All messages marked as read!");
+    alert("✅ All messages marked as read!");
 };
 
 let unpatch: (() => void) | undefined;
@@ -33,7 +34,7 @@ export const onLoad = () => {
         return;
     }
 
-    // Patch the Guilds UI to add a floating button
+    // Patch the Guilds UI to add the button
     unpatch = after("default", Guilds, ([props], res) => {
         if (!res) return res;
 
