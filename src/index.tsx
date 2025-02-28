@@ -2,7 +2,7 @@ import { React, useState } from "react";
 import { Button } from "@vendetta/ui/components";
 import { flux, storage } from "@vendetta/api";
 import { showToast, ToastType } from "@vendetta/ui/toasts";
-import Settings from "./Settings"; // Import your Settings page
+import Settings from "./Settings"; // Import settings
 import styles from "./style"; // Import your styles
 
 // Initialize excluded users in storage if not already present
@@ -44,9 +44,6 @@ const MarkAllReadButton = () => {
       showToast("❌ Error: markRead action not found.", ToastType.FAILURE);
     }
   };
-
-  // Add log to verify the button rendering
-  console.log("Rendering MarkAllReadButton Component");
 
   return (
     <Button
