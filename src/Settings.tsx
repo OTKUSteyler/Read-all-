@@ -1,30 +1,16 @@
-import { React, useState } from "react";
-import { TextInput, Button } from "@vendetta/ui/components";
-import { storage } from "@vendetta/api";
+import { React } from "@vendetta";
+import { Forms } from "@vendetta/ui/components";
+import { storage } from "@vendetta/plugin";
 
-const Settings = () => {
-  const [excludedUser, setExcludedUser] = useState("");
-
-  const saveUser = () => {
-    let excludedUsers = storage.get("excludedUsers", []);
-    if (excludedUser && !excludedUsers.includes(excludedUser)) {
-      excludedUsers.push(excludedUser);
-      storage.set("excludedUsers", excludedUsers);
-      console.log("Saved excluded user:", excludedUser);
-      setExcludedUser(""); // Reset the input field after saving
-    }
-  };
-
+export default function Settings() {
   return (
-    <>
-      <TextInput
-        label="Exclude User ID"
-        value={excludedUser}
-        onChange={setExcludedUser}
+    <Forms.FormSection title="Read All Messages Settings">
+      <Forms.FormInput
+        title="Excluded Users (Comma Separated)"
+        value={storage.get("excludedUsers", []).join(", ")}
+        onChange={(value) => storage.set("excludedUsers", value.split(",").map(id => id.trim()))}
+        placeholder="Enter user IDs to exclude"
       />
-      <Button onClick={saveUser}>Save Excluded User</Button>
-    </>
+    </Forms.FormSection>
   );
-};
-
-export default Settings;
+}
