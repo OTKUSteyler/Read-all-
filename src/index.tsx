@@ -1,88 +1,46 @@
-import { React, ReactNative } from "@vendetta/metro/common";
-import { findByProps } from "@vendetta/metro";
-import { after } from "@vendetta/patcher";
-import { logger } from "@vendetta";
+import { React, useState, useEffect } from 'react';
+import { Button } from '@vendetta/ui/components';
+import { flux } from '@vendetta/api';
+import { showToast } from '@vendetta/ui/toasts';
 
-// UI Components
-const { View, TouchableOpacity, Text, StyleSheet } = ReactNative;
+const MarkAllReadButton = () => {
+  const [allRead, setAllRead] = useState(false);
 
-// Get the Guilds Component
-const Guilds = findByProps("Guilds", "UnreadBadges");
-const ChannelStore = findByProps("getUnreadCount", "getLastMessageId", "getMutableGuildChannels");
-const SelectedGuildStore = findByProps("getLastSelectedGuildId");
-
-if (!Guilds) {
-    logger.error("❌ Could not find Guilds component!");
-}
-
-const markAllRead = () => {
-    const guildId = SelectedGuildStore.getLastSelectedGuildId();
-    if (!guildId) {
-        alert("⚠ No server selected!");
-        return;
+  const handleMarkAllRead = () => {
+    console.log("Mark All as Read Button Clicked");
+    
+    // Use Flux action to mark all notifications as read (Vendetta's equivalent to Aliucord's patching)
+    if (flux.actions.markAllNotificationsAsRead) {
+      flux.actions.markAllNotificationsAsRead(); 
+      setAllRead(true);
+      showToast("All messages marked as read!", ToastType.SUCCESS);
+    } else {
+      console.error("markAllNotificationsAsRead not found in flux actions.");
+      showToast("Failed to mark messages as read.", ToastType.FAILURE);
     }
+  };
 
-    const channels = ChannelStore.getMutableGuildChannels(guildId);
-    if (!channels) {
-        alert("⚠ No unread messages found!");
-        return;
-    }
+  useEffect(() => {
+    console.log("useEffect Hook Ran");
+    const interval = setInterval(() => {
+      const unreadMessages = flux.store.getState().notifications.unread;
+      console.log("Checking unread messages:", unreadMessages);
+      if (unreadMessages > 0) {
+        setAllRead(false);
+      }
+    }, 1000);
 
-    for (const channelId in channels) {
-        ChannelStore.getLastMessageId(channelId);
-    }
+    return () => {
+      clearInterval(interval);
+      console.log("useEffect Cleanup");
+    };
+  }, []);
 
-    alert("✅ All messages marked as read!");
+  return (
+    <Button onClick={handleMarkAllRead} size={Button.Sizes.SMALL} disabled={allRead}>
+      {allRead ? "All Read" : "Mark All as Read"}
+    </Button>
+  );
 };
 
-let unpatch: (() => void) | undefined;
-
-export const onLoad = () => {
-    logger.log("✅ Read All Plugin Loaded!");
-
-    if (!Guilds) return;
-
-    unpatch = after("default", Guilds, ([props], res) => {
-        logger.log("✅ Guilds UI patched!");
-
-        if (!res) return res;
-
-        const FloatingButton = () => (
-            <View style={styles.container}>
-                <TouchableOpacity style={styles.button} onPress={markAllRead}>
-                    <Text style={styles.text}>📩 Read All</Text>
-                </TouchableOpacity>
-            </View>
-        );
-
-        return (
-            <>
-                {res}
-                <FloatingButton />
-            </>
-        );
-    });
-};
-
-export const onUnload = () => {
-    if (unpatch) unpatch();
-};
-
-const styles = StyleSheet.create({
-    container: {
-        position: "absolute",
-        bottom: 100,
-        right: 20,
-        backgroundColor: "#5865F2",
-        borderRadius: 50,
-        padding: 10,
-        elevation: 5,
-    },
-    button: {
-        padding: 10,
-    },
-    text: {
-        color: "white",
-        fontWeight: "bold",
-    },
-});
+export default MarkAllReadButton;
