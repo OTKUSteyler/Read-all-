@@ -3,25 +3,26 @@ import { Button, TextInput, View } from '@vendetta/ui/components';
 import { flux, storage } from '@vendetta/api';
 import { showToast } from '@vendetta/ui/toasts';
 
-// Load stored excluded users (or empty list if not set)
-const excludedUsers = storage.get("excludedUsers", []);
+// Ensure storage key exists
+if (!storage.get("excludedUsers")) storage.set("excludedUsers", []);
 
 const MarkAllReadButton = () => {
   const [allRead, setAllRead] = useState(false);
+  const excludedUsers = storage.get("excludedUsers", []);
 
   const handleMarkAllRead = () => {
     console.log("Mark All as Read Button Clicked");
 
     // Get unread messages
-    const unreadMessages = flux.store.getState().messages.unread;
+    const unreadMessages = flux.store.getState().messages?.unread || [];
 
-    if (!unreadMessages) {
+    if (unreadMessages.length === 0) {
       showToast("No unread messages found.", ToastType.INFO);
       return;
     }
 
     // Filter out excluded users
-    const filteredMessages = unreadMessages.filter(msg => !excludedUsers.includes(msg.author.id));
+    const filteredMessages = unreadMessages.filter(msg => !excludedUsers.includes(msg.author?.id));
 
     if (filteredMessages.length === 0) {
       showToast("All unread messages are from excluded users.", ToastType.INFO);
@@ -29,9 +30,13 @@ const MarkAllReadButton = () => {
     }
 
     // Mark only non-excluded messages as read
-    flux.actions.markRead(filteredMessages.map(msg => msg.id));
-    setAllRead(true);
-    showToast("Marked messages as read!", ToastType.SUCCESS);
+    if (flux.actions.markRead) {
+      flux.actions.markRead(filteredMessages.map(msg => msg.id));
+      setAllRead(true);
+      showToast("Marked messages as read!", ToastType.SUCCESS);
+    } else {
+      showToast("Error: markRead action not found.", ToastType.FAILURE);
+    }
   };
 
   return (
@@ -43,7 +48,7 @@ const MarkAllReadButton = () => {
 
 // ================ SETTINGS COMPONENT =====================
 const Settings = () => {
-  const [excluded, setExcluded] = useState(excludedUsers.join(", "));
+  const [excluded, setExcluded] = useState(storage.get("excludedUsers", []).join(", "));
 
   const handleExcludedChange = (value) => {
     const users = value.split(",").map(user => user.trim());
@@ -64,8 +69,8 @@ const Settings = () => {
 
 // ================ EXPORT PLUGIN & SETTINGS =====================
 export default {
-  onLoad: () => console.log("Plugin Loaded!"),
-  onUnload: () => console.log("Plugin Unloaded!"),
-  settings: Settings, // 🔥 FIXES THE SETTINGS BUTTON 🔥
-  render: MarkAllReadButton, // Adds the button to the UI
+  onLoad: () => console.log("✅ Plugin Loaded!"),
+  onUnload: () => console.log("🛑 Plugin Unloaded!"),
+  settings: Settings, // Makes settings clickable
+  render: MarkAllReadButton, // Adds button to UI
 };
