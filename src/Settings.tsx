@@ -1,14 +1,17 @@
-import { storage } from '@vendetta/plugin';
-import { Forms } from '@vendetta/ui/components';
+import { storage } from "@vendetta/plugin";
+import { useProxy } from "@vendetta/storage";
+import { Forms } from "@vendetta/ui/components";
 
-const { FormSwitch } = Forms;
+export default function Settings() {
+    useProxy(storage);
 
-const SettingsPage = () => (
-    <FormSwitch
-        label="Mark DMs as Read"
-        value={storage.markDMs}
-        onValueChange={(value) => (storage.markDMs = value)}
-    />
-);
-
-export default SettingsPage;
+    return (
+        <Forms.FormSection title="Read All Settings">
+            <Forms.FormSwitch
+                label="Enable for DMs"
+                value={storage.markDMs ?? true}
+                onValueChange={(value) => (storage.markDMs = value)}
+            />
+        </Forms.FormSection>
+    );
+}
