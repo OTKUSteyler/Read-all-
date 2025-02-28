@@ -4,7 +4,7 @@ import { storage } from "@vendetta/plugin";
 
 export default function Settings() {
   const excludedUsers = storage.get("excludedUsers", []);
-  
+
   const handleChange = (value: string) => {
     console.log("Saving excluded users:", value);
     storage.set("excludedUsers", value.split(",").map(id => id.trim()));
