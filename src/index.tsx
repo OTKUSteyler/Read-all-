@@ -1,16 +1,15 @@
 import { React } from "@vendetta";
 import { Button } from "@vendetta/ui/components";
 import { showToast, ToastType } from "@vendetta/ui/toasts";
-import { storage } from "@vendetta/plugin";
 import { after } from "@vendetta/patcher";
 import { findByProps } from "@vendetta/metro";
-import Settings from "./Settings";
+import Settings from "./Settings"; // Import the settings page
 
-// Discord API methods
+// Get unread messages & mark as read
 const UnreadStore = findByProps("getUnreadGuilds");
 const MessagesStore = findByProps("markRead");
 
-// Ensure storage has excluded users
+// Ensure excluded users are stored
 if (!storage.get("excludedUsers")) {
   storage.set("excludedUsers", []);
 }
@@ -35,7 +34,7 @@ const handleMarkAllRead = () => {
 
   console.log("✅ Marking these as read:", filteredGuilds);
 
-  // Mark each as read
+  // Mark messages as read
   MessagesStore.markRead(filteredGuilds);
 
   showToast("✅ Marked all messages as read!", ToastType.SUCCESS);
@@ -48,7 +47,7 @@ const MarkAllReadButton = () => (
   </Button>
 );
 
-// Inject into UI
+// Inject button into UI
 const Channels = findByProps("ChannelItem");
 const patch = after("render", Channels, ([props], res) => {
   if (!res?.props?.children) return res;
@@ -63,5 +62,5 @@ export default {
     patch();
   },
   onUnload: () => patch?.(),
-  settings: Settings,
+  settings: Settings, // Reference to the settings page
 };
