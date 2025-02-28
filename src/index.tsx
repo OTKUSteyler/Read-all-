@@ -1,43 +1,30 @@
-import { after } from "@vendetta/patcher";
-import { findByName, findByProps } from "@vendetta/metro";
-import { React } from "@vendetta/metro/common";
-import { logger } from "@vendetta";
+import { React, useEffect } from '@vendetta/metro/common';
+import { Button } from '@vendetta/ui/components';
+import { flux } from '@vendetta/api/flux';
 
-// Get the Guilds component (server list)
-const Guilds = findByName("Guilds", false);
-const Toasts = findByProps("showToast");
+export default function InjectMarkAllReadButton() {
+  useEffect(() => {
+    // Use Vendetta API to add the button to the Discord UI
+    const interval = setInterval(() => {
+      const notificationPanel = document.querySelector('.notifications-class'); // Find where notifications are listed
+      
+      if (notificationPanel) {
+        // Assuming you add the button inside the notification panel
+        const button = document.createElement('div');
+        button.innerHTML = `
+          <button onclick="markAllRead()" style="padding: 10px; background-color: #4CAF50; color: white; border: none;">Mark All as Read</button>
+        `;
+        
+        notificationPanel.appendChild(button);
+        clearInterval(interval); // Stop checking after the button is added
+      }
+    }, 1000); // Try every second until the panel is found
+  }, []);
 
-// Function to mark all messages as read
-const markAllRead = () => {
-    Toasts.showToast({
-        message: "✔ Read All Messages",
-        duration: 3000, // 3 seconds
-        onPress: () => {
-            alert("Marked all as read! (Implement actual functionality)");
-        },
-    });
-};
+  // Mark All as Read logic
+  const markAllRead = () => {
+    flux.actions.markAllNotificationsAsRead();
+  };
 
-let unpatch: (() => void) | undefined;
-
-export const onLoad = () => {
-    if (!Guilds) {
-        logger.error("❌ Could not find Guilds component!");
-        return;
-    }
-
-    unpatch = after("default", Guilds, ([props], res) => {
-        if (!res) return res;
-
-        // Automatically show toast on startup (acting as a floating button)
-        markAllRead();
-
-        return res;
-    });
-
-    logger.log("✅ Read All Plugin Loaded!");
-};
-
-export const onUnload = () => {
-    if (unpatch) unpatch();
-};
+  return null; // This is an injected button, no need for a render function here
+}
