@@ -1,12 +1,22 @@
 import { after } from "@vendetta/patcher";
-import { findByName } from "@vendetta/metro";
-import { React, ReactNative } from "@vendetta/metro/common";
+import { findByName, findByProps } from "@vendetta/metro";
+import { React } from "@vendetta/metro/common";
 import { logger } from "@vendetta";
-
-const { View, TouchableOpacity, Text, StyleSheet } = ReactNative;
 
 // Get the Guilds component (server list)
 const Guilds = findByName("Guilds", false);
+const Toasts = findByProps("showToast");
+
+// Function to mark all messages as read
+const markAllRead = () => {
+    Toasts.showToast({
+        message: "✔ Read All Messages",
+        duration: 3000, // 3 seconds
+        onPress: () => {
+            alert("Marked all as read! (Implement actual functionality)");
+        },
+    });
+};
 
 let unpatch: (() => void) | undefined;
 
@@ -19,39 +29,15 @@ export const onLoad = () => {
     unpatch = after("default", Guilds, ([props], res) => {
         if (!res) return res;
 
-        const ReadAllButton = (
-            <TouchableOpacity style={styles.button} onPress={markAllRead}>
-                <Text style={styles.text}>✔ Read All</Text>
-            </TouchableOpacity>
-        );
+        // Automatically show toast on startup (acting as a floating button)
+        markAllRead();
 
-        res.props.children.unshift(ReadAllButton); // Add to the top of server list
         return res;
     });
 
     logger.log("✅ Read All Plugin Loaded!");
 };
 
-// Function to mark all messages as read
-const markAllRead = () => {
-    alert("Marked all as read! (Implement actual functionality)");
-};
-
 export const onUnload = () => {
     if (unpatch) unpatch();
 };
-
-// Styles for the button
-const styles = StyleSheet.create({
-    button: {
-        backgroundColor: "#7289DA", // Discord blurple
-        padding: 10,
-        borderRadius: 5,
-        margin: 5,
-        alignItems: "center",
-    },
-    text: {
-        color: "#FFFFFF",
-        fontWeight: "bold",
-    },
-});
