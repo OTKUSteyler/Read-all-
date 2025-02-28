@@ -2,7 +2,7 @@ import { React, useState } from "react";
 import { Button } from "@vendetta/ui/components";
 import { flux, storage } from "@vendetta/api";
 import { showToast } from "@vendetta/ui/toasts";
-import Settings from "./settings"; // Ensure this points to the correct path of settings.tsx
+import Settings from "./Settings"; // Ensure this points to the correct path of settings.tsx
 import styles from "./style"; // Ensure this points to the correct path of style.ts
 
 // Load stored excluded users (or default to an empty list)
