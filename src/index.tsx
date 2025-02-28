@@ -1,26 +1,21 @@
 import { React } from "@vendetta";
 import { Button } from "@vendetta/ui/components";
 import { showToast, ToastType } from "@vendetta/ui/toasts";
-import { after } from "@vendetta/patcher";
+import { storage } from "@vendetta/plugin";
 import { findByProps } from "@vendetta/metro";
-import Settings from "./Settings"; // Import the settings page
+import Settings from "./Settings";  // Ensure this is correct
 
-// Get unread messages & mark as read
 const UnreadStore = findByProps("getUnreadGuilds");
 const MessagesStore = findByProps("markRead");
 
-// Ensure excluded users are stored
-if (!storage.get("excludedUsers")) {
-  storage.set("excludedUsers", []);
-}
-
-// Function to mark all messages as read
 const handleMarkAllRead = () => {
   console.log("📩 Mark All as Read button clicked.");
 
   // Get unread messages
   const unreadGuilds = UnreadStore?.getUnreadGuilds?.() || [];
   const excludedUsers = storage.get("excludedUsers", []);
+  console.log("Unread Guilds:", unreadGuilds);
+  console.log("Excluded Users:", excludedUsers);
 
   // Filter out excluded users
   const filteredGuilds = unreadGuilds.filter(
@@ -33,21 +28,21 @@ const handleMarkAllRead = () => {
   }
 
   console.log("✅ Marking these as read:", filteredGuilds);
-
-  // Mark messages as read
   MessagesStore.markRead(filteredGuilds);
-
   showToast("✅ Marked all messages as read!", ToastType.SUCCESS);
 };
 
-// Button component
-const MarkAllReadButton = () => (
-  <Button onClick={handleMarkAllRead} style={{ padding: 10, backgroundColor: "blue", color: "white" }}>
-    📩 Mark All as Read
-  </Button>
-);
+// Debug the button rendering
+const MarkAllReadButton = () => {
+  console.log("Rendering Mark All Read Button");  // Debugging the button rendering
+  return (
+    <Button onClick={handleMarkAllRead} style={{ padding: 10, backgroundColor: "blue", color: "white" }}>
+      📩 Mark All as Read
+    </Button>
+  );
+};
 
-// Inject button into UI
+// Debug injecting into the UI
 const Channels = findByProps("ChannelItem");
 const patch = after("render", Channels, ([props], res) => {
   if (!res?.props?.children) return res;
@@ -62,5 +57,5 @@ export default {
     patch();
   },
   onUnload: () => patch?.(),
-  settings: Settings, // Reference to the settings page
+  settings: Settings,
 };
