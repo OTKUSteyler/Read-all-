@@ -9,13 +9,25 @@ let unpatch: (() => void) | undefined;
 
 export const onLoad = () => {
     try {
-        // Debugging: Inspect ChannelActions and available methods
-        const ChannelActions = findByProps("ack", "ackMessage");
-        console.log("[Read All] ChannelActions:", ChannelActions); // Log to inspect ChannelActions
+        // Find ChannelActions object and log its properties to inspect its contents
+        const ChannelActions = findByProps("ack", "ackMessage"); // Try with relevant props
+        console.log("[Read All] ChannelActions:", ChannelActions); // Inspect ChannelActions object
 
+        if (!ChannelActions) {
+            console.error("[Read All] ChannelActions is undefined");
+            showToast("Failed to find ChannelActions.", { type: "danger" });
+            return;
+        }
+
+        // Log all available properties in ChannelActions to understand its structure
+        Object.keys(ChannelActions).forEach((key) => {
+            console.log(`[Read All] ChannelActions function: ${key}`);
+        });
+
+        // Find the function to mark messages as read (this might have a different name)
         if (!ChannelActions?.ack) {
-            console.error("[Read All] 'ack' function not found in ChannelActions:", ChannelActions);
-            showToast("Failed to find Discord message functions.", { type: "danger" });
+            console.error("[Read All] 'ack' function not found in ChannelActions.");
+            showToast("Failed to find 'ack' function in ChannelActions.", { type: "danger" });
             return;
         }
 
@@ -53,7 +65,9 @@ export const onLoad = () => {
                                     Object.values(channels).forEach((channel) => {
                                         if (!channel.is_read) {
                                             console.log(`[Read All] Marking channel ${channel.id} as read.`);
-                                            ChannelActions.ack(channel.id); // Use the correct function after inspection
+                                            // Use the correct function after inspecting ChannelActions
+                                            // Replace ChannelActions.ack with the correct function if needed
+                                            ChannelActions.ack?.(channel.id);  // Replace with the correct method if ack is missing
                                         }
                                     });
                                 }
