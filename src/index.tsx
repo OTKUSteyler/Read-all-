@@ -1,6 +1,6 @@
 import { after } from "@vendetta/patcher";
-import { findByProps, findByName } from "@vendetta/metro";
-import { React } from "@vendetta/metro/common";
+import { findByProps } from "@vendetta/metro";
+import { React, ReactNative } from "@vendetta/metro/common";
 import { showToast } from "@vendetta/ui/toasts";
 import Settings from "./Settings";
 import { storage } from "@vendetta/plugin";
@@ -17,9 +17,11 @@ export const onLoad = () => {
             return;
         }
 
-        const QuickSettings = findByName("QuickActions");
-        if (!QuickSettings) {
-            showToast("Failed to find Quick Settings UI.", { type: "danger" });
+        const GuildsComponent = findByProps("Guilds", "GuildsList");
+        console.log("[Read All] GuildsComponent:", GuildsComponent);
+
+        if (!GuildsComponent?.Guilds) {
+            showToast("Failed to find the server list UI.", { type: "danger" });
             return;
         }
 
@@ -28,29 +30,38 @@ export const onLoad = () => {
             storage.enableReadAll = true;
         }
 
-        unpatch = after("default", QuickSettings, ([props], res) => {
+        unpatch = after("Guilds", GuildsComponent, ([props], res) => {
             if (!res?.props?.children || !storage.enableReadAll) return res;
 
             res.props.children.unshift(
-                <QuickSettings.Button
-                    label="📩 Read All"
-                    onPress={() => {
-                        try {
-                            const channels = findByProps("getMutableGuilds")?.getMutableGuilds?.();
-                            if (!channels) return;
+                <ReactNative.View style={{ padding: 10 }}>
+                    <ReactNative.TouchableOpacity
+                        style={{
+                            backgroundColor: "#5865F2",
+                            padding: 10,
+                            borderRadius: 5,
+                            alignItems: "center",
+                        }}
+                        onPress={() => {
+                            try {
+                                const channels = findByProps("getMutableGuilds")?.getMutableGuilds?.();
+                                if (!channels) return;
 
-                            Object.keys(channels).forEach((guildId) => {
-                                const channelId = channels[guildId]?.channels?.find?.((c) => c.is_read === false)?.id;
-                                if (channelId) ChannelActions.ack(channelId);
-                            });
+                                Object.keys(channels).forEach((guildId) => {
+                                    const channelId = channels[guildId]?.channels?.find?.((c) => c.is_read === false)?.id;
+                                    if (channelId) ChannelActions.ack(channelId);
+                                });
 
-                            showToast("All messages marked as read!", { type: "success" });
-                        } catch (err) {
-                            console.error("[Read All] Error:", err);
-                            showToast("Error marking messages as read.", { type: "danger" });
-                        }
-                    }}
-                />
+                                showToast("All messages marked as read!", { type: "success" });
+                            } catch (err) {
+                                console.error("[Read All] Error:", err);
+                                showToast("Error marking messages as read.", { type: "danger" });
+                            }
+                        }}
+                    >
+                        <ReactNative.Text style={{ color: "#FFFFFF" }}>📩 Read All Messages</ReactNative.Text>
+                    </ReactNative.TouchableOpacity>
+                </ReactNative.View>
             );
 
             return res;
