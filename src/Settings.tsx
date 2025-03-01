@@ -1,16 +1,15 @@
 import { storage } from "@vendetta/plugin";
-import { Forms } from "@vendetta/ui/components";
+import { React } from "@vendetta/metro/common";
+import { General } from "@vendetta/ui/components";
 
-const { FormSwitch } = Forms;
-
-export default () => {
-    return (
-        <FormSwitch
-            label="Enable Read All Button"
-            value={storage.enableReadAll ?? true}
-            onValueChange={(value) => {
-                storage.enableReadAll = value;
+export default () => (
+    <General.SettingsSection title="Read All Messages">
+        <General.SettingsSwitch
+            title="Enable 'Read All Messages' Button"
+            value={storage.enableReadAll}
+            onValueChange={(val) => {
+                storage.enableReadAll = val;
             }}
         />
-    );
-};
+    </General.SettingsSection>
+);
