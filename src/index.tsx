@@ -1,4 +1,4 @@
-
+``
 import { showToast } from "@vendetta/ui/toasts";
 import { getAssetIDByName } from '@vendetta/ui/assets';
 
@@ -13,4 +13,4 @@ export default {
     console.log("❌ Read All Messages Plugin Unloaded!");
   },
 };
-
+``
