@@ -14,44 +14,47 @@ export const onLoad = () => {
         return;
     }
 
-    // Patch the server list UI
-    const GuildsList = findByProps("GuildsList");
-    if (!GuildsList) {
-        showToast("Failed to find GuildsList.", { type: "danger" });
+    // Find the component responsible for the server list
+    const GuildsComponent = findByProps("Guilds", "GuildsList");
+
+    if (!GuildsComponent?.Guilds) {
+        showToast("Failed to find the server list UI.", { type: "danger" });
         return;
     }
 
-    unpatch = after("default", GuildsList, ([props], res) => {
+    unpatch = after("Guilds", GuildsComponent, ([props], res) => {
         if (!res?.props?.children) return res;
 
         res.props.children.unshift(
-            <ReactNative.TouchableOpacity
-                style={{
-                    margin: 10,
-                    padding: 10,
-                    backgroundColor: "#5865F2",
-                    borderRadius: 8,
-                }}
-                onPress={() => {
-                    const channels = findByProps("getMutableGuilds")?.getMutableGuilds?.();
-                    if (!channels) return;
+            <ReactNative.View style={{ padding: 10 }}>
+                <ReactNative.TouchableOpacity
+                    style={{
+                        backgroundColor: "#5865F2",
+                        padding: 10,
+                        borderRadius: 5,
+                        alignItems: "center",
+                    }}
+                    onPress={() => {
+                        const channels = findByProps("getMutableGuilds")?.getMutableGuilds?.();
+                        if (!channels) return;
 
-                    Object.keys(channels).forEach((guildId) => {
-                        const channelId = channels[guildId]?.channels?.find?.((c) => c.is_read === false)?.id;
-                        if (channelId) ChannelActions.ack(channelId);
-                    });
+                        Object.keys(channels).forEach((guildId) => {
+                            const channelId = channels[guildId]?.channels?.find?.((c) => c.is_read === false)?.id;
+                            if (channelId) ChannelActions.ack(channelId);
+                        });
 
-                    showToast("All messages marked as read!", { type: "success" });
-                }}
-            >
-                <ReactNative.Text style={{ color: "#FFF", textAlign: "center" }}>Read All</ReactNative.Text>
-            </ReactNative.TouchableOpacity>
+                        showToast("All messages marked as read!", { type: "success" });
+                    }}
+                >
+                    <ReactNative.Text style={{ color: "#FFFFFF" }}>📩 Read All Messages</ReactNative.Text>
+                </ReactNative.TouchableOpacity>
+            </ReactNative.View>
         );
 
         return res;
     });
 
-    showToast("Read All Messages Button Added!", { type: "success" });
+    showToast("Read All Messages Button Added to Server List!", { type: "success" });
 };
 
 export const onUnload = () => {
