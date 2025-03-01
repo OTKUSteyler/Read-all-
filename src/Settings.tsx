@@ -1,15 +1,15 @@
 import { storage } from "@vendetta/plugin";
 import { React } from "@vendetta/metro/common";
-import { General } from "@vendetta/ui/components";
+import { Forms } from "@vendetta/ui/components";
 
 export default () => (
-    <General.SettingsSection title="Read All Messages">
-        <General.SettingsSwitch
-            title="Enable 'Read All Messages' Button"
+    <Forms.FormSection title="Read All Messages">
+        <Forms.FormSwitchRow
+            label="Enable 'Read All Messages' Overlay Button"
             value={storage.enableReadAll}
             onValueChange={(val) => {
                 storage.enableReadAll = val;
             }}
         />
-    </General.SettingsSection>
+    </Forms.FormSection>
 );
