@@ -3,14 +3,14 @@ import { Forms } from "@vendetta/ui/components";
 
 const { FormSwitch } = Forms;
 
-export default function Settings() {
+export default () => {
     return (
         <FormSwitch
             label="Enable Read All Button"
-            value={storage.enabled ?? true}
+            value={storage.enableReadAll ?? true}
             onValueChange={(value) => {
-                storage.enabled = value;
+                storage.enableReadAll = value;
             }}
         />
     );
-}
+};
