@@ -31,7 +31,7 @@ export const onLoad = () => {
         }
 
         unpatch = after("pushLayer", Overlay, ([props], res) => {
-            if (!storage.enableReadAll) return res;
+            if (!storage.enableReadAll) return res; // Disable button if toggle is off
 
             return (
                 <>
@@ -39,12 +39,14 @@ export const onLoad = () => {
                     <ReactNative.View
                         style={{
                             position: "absolute",
-                            bottom: 50,
-                            right: 20,
+                            bottom: 20,
+                            left: "50%",
+                            transform: [{ translateX: -75 }], // Center horizontally
                             backgroundColor: "#5865F2",
-                            padding: 12,
+                            padding: 15,
                             borderRadius: 25,
                             alignItems: "center",
+                            width: 150, // Fixed width for better UI
                             elevation: 5,
                         }}
                     >
@@ -66,8 +68,8 @@ export const onLoad = () => {
                                 }
                             }}
                         >
-                            <ReactNative.Text style={{ color: "#FFFFFF", fontWeight: "bold" }}>
-                                📩 Read All
+                            <ReactNative.Text style={{ color: "#FFFFFF", fontWeight: "bold", textAlign: "center" }}>
+                                📩 Read All Messages
                             </ReactNative.Text>
                         </ReactNative.TouchableOpacity>
                     </ReactNative.View>
