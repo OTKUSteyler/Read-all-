@@ -13,26 +13,30 @@ export const onLoad = () => {
 
         const ChannelActions = findByProps("ack", "ackMessage");
         if (!ChannelActions) {
-            showToast("Failed to find Discord functions.", { type: "danger" });
+            showToast("❌ Failed to find Discord message functions.", { type: "danger" });
             return;
         }
+        console.log("[Read All] ✅ Found ChannelActions:", ChannelActions);
 
         const GuildsComponent = findByProps("Guilds", "GuildsList");
-        console.log("[Read All] GuildsComponent:", GuildsComponent);
-
+        console.log("[Read All] 🔍 Searching for GuildsComponent...");
         if (!GuildsComponent?.Guilds) {
-            showToast("Failed to find the server list UI.", { type: "danger" });
+            console.log("[Read All] ❌ Failed to find GuildsComponent.");
+            showToast("❌ Failed to find the server list UI.", { type: "danger" });
             return;
         }
+        console.log("[Read All] ✅ Found GuildsComponent:", GuildsComponent);
 
         // Default to enabled if not set
         if (storage.enableReadAll === undefined) {
             storage.enableReadAll = true;
         }
 
+        console.log("[Read All] 🔹 Patching GuildsComponent...");
         unpatch = after("Guilds", GuildsComponent, ([props], res) => {
             if (!res?.props?.children || !storage.enableReadAll) return res;
 
+            console.log("[Read All] 🛠 Inserting Button into GuildsComponent...");
             res.props.children.unshift(
                 <ReactNative.View style={{ padding: 10 }}>
                     <ReactNative.TouchableOpacity
@@ -45,17 +49,21 @@ export const onLoad = () => {
                         onPress={() => {
                             try {
                                 const channels = findByProps("getMutableGuilds")?.getMutableGuilds?.();
-                                if (!channels) return;
+                                if (!channels) {
+                                    console.log("[Read All] ❌ No channels found.");
+                                    return;
+                                }
 
+                                console.log("[Read All] ✅ Marking all messages as read...");
                                 Object.keys(channels).forEach((guildId) => {
                                     const channelId = channels[guildId]?.channels?.find?.((c) => c.is_read === false)?.id;
                                     if (channelId) ChannelActions.ack(channelId);
                                 });
 
-                                showToast("All messages marked as read!", { type: "success" });
+                                showToast("✅ All messages marked as read!", { type: "success" });
                             } catch (err) {
-                                console.error("[Read All] Error:", err);
-                                showToast("Error marking messages as read.", { type: "danger" });
+                                console.error("[Read All] ❌ Error:", err);
+                                showToast("❌ Error marking messages as read.", { type: "danger" });
                             }
                         }}
                     >
@@ -64,12 +72,13 @@ export const onLoad = () => {
                 </ReactNative.View>
             );
 
+            console.log("[Read All] ✅ Button added successfully.");
             return res;
         });
 
     } catch (err) {
-        console.error("[Read All] Plugin Load Error:", err);
-        showToast("Plugin Load Failed!", { type: "danger" });
+        console.error("[Read All] ❌ Plugin Load Error:", err);
+        showToast("❌ Plugin Load Failed!", { type: "danger" });
     }
 };
 
@@ -77,11 +86,12 @@ export const onUnload = () => {
     try {
         if (unpatch) {
             unpatch();
-            showToast("Plugin Successfully Unloaded!", { type: "success" });
+            console.log("[Read All] 🔹 Unpatched successfully.");
+            showToast("✅ Plugin Successfully Unloaded!", { type: "success" });
         }
     } catch (err) {
-        console.error("[Read All] Unload Error:", err);
-        showToast("Error during Unload!", { type: "danger" });
+        console.error("[Read All] ❌ Unload Error:", err);
+        showToast("❌ Error during Unload!", { type: "danger" });
     }
 };
 
