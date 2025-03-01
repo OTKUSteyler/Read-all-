@@ -1,9 +1,11 @@
 import { storage } from "@vendetta/plugin";
-import { General } from "@vendetta/ui/components";
+import { Forms } from "@vendetta/ui/components";
+
+const { FormSwitch } = Forms;
 
 export default function Settings() {
     return (
-        <General.FormSwitch
+        <FormSwitch
             label="Enable Read All Button"
             value={storage.enabled ?? true}
             onValueChange={(value) => {
