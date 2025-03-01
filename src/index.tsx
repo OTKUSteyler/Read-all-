@@ -10,21 +10,29 @@ let unpatch: (() => void) | undefined;
 
 export const onLoad = () => {
     try {
-        showToast("Loading Read All Messages Plugin...", { type: "info" });
+        showToast("🔄 Loading Read All Messages Plugin...", { type: "info" });
+
+        // Debug: Log available functions
+        console.log("[Read All] 🔍 Searching for Discord functions...");
 
         // Find the correct Discord functions
         const ChannelActions = findByProps("bulkAck", "ack", "ackMessage", "setReadState");
+
         if (!ChannelActions || typeof ChannelActions.ack !== "function") {
-            console.log("[Read All] ❌ Could not find `ack` function, plugin may not work.");
+            console.log("[Read All] ❌ Could not find `ack` function.");
             showToast("❌ Discord function lookup failed! Plugin may not work.", { type: "danger" });
             return;
         }
+
+        console.log("[Read All] ✅ Found Discord functions:", ChannelActions);
 
         const GuildsComponent = findByProps("Guilds", "GuildsList");
         if (!GuildsComponent?.Guilds) {
             showToast("❌ Failed to find the server list UI.", { type: "danger" });
             return;
         }
+
+        console.log("[Read All] ✅ Found Guilds UI component.");
 
         // Default to enabled if not set
         if (storage.enableReadAll === undefined) {
@@ -49,6 +57,7 @@ export const onLoad = () => {
                     <ReactNative.TouchableOpacity
                         onPress={() => {
                             try {
+                                console.log("[Read All] 📨 Marking all messages as read...");
                                 const channels = findByProps("getMutableGuilds")?.getMutableGuilds?.();
                                 if (!channels) return;
 
@@ -71,6 +80,8 @@ export const onLoad = () => {
 
             return res;
         });
+
+        console.log("[Read All] ✅ Plugin loaded successfully.");
 
     } catch (err) {
         console.error("[Read All] ❌ Plugin Load Error:", err);
