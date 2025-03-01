@@ -1,20 +1,33 @@
-import { storage } from "@vendetta/plugin";
 import { React, useState } from "@vendetta/metro/common";
-import { Forms } from "@vendetta/ui/components";
+import { storage } from "@vendetta/plugin";
+import { View, Text, Switch } from "react-native";
 
 export default () => {
-    const [enabled, setEnabled] = useState(storage.enableReadAll);
+    const [enabled, setEnabled] = useState(storage.enableReadAll ?? true); // Default to true if undefined
+
+    const toggleSwitch = (val: boolean) => {
+        storage.enableReadAll = val; // Save to storage
+        setEnabled(val); // Update UI instantly
+    };
 
     return (
-        <Forms.FormSection title="Read All Messages Plugin">
-            <Forms.FormSwitchRow
-                label="Enable 'Read All Messages' Overlay Button"
+        <View
+            style={{
+                flex: 1,
+                justifyContent: "center",
+                alignItems: "center",
+                backgroundColor: "#1E1E1E",
+            }}
+        >
+            <Text style={{ fontSize: 18, color: "#FFFFFF", marginBottom: 15 }}>
+                Enable 'Read All Messages' Button
+            </Text>
+            <Switch
                 value={enabled}
-                onValueChange={(val) => {
-                    storage.enableReadAll = val;
-                    setEnabled(val); // Immediately update the UI
-                }}
+                onValueChange={toggleSwitch}
+                trackColor={{ false: "#767577", true: "#5865F2" }}
+                thumbColor={enabled ? "#FFFFFF" : "#CCCCCC"}
             />
-        </Forms.FormSection>
+        </View>
     );
 };
