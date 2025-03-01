@@ -9,19 +9,12 @@ let unpatch: (() => void) | undefined;
 
 export const onLoad = () => {
     try {
-        showToast("Loading Read All Messages Plugin...", { type: "info" });
+        showToast("📥 Loading Read All Messages Plugin...", { type: "info" });
 
         // Find necessary Discord functions
         const ChannelActions = findByProps("ack", "ackMessage");
         if (!ChannelActions) {
-            showToast("Failed to find Discord functions.", { type: "danger" });
-            return;
-        }
-
-        // Find server list UI
-        const GuildsComponent = findByProps("Guilds", "GuildsList");
-        if (!GuildsComponent?.Guilds) {
-            showToast("Failed to find the server list UI.", { type: "danger" });
+            showToast("❌ Failed to find Discord functions.", { type: "danger" });
             return;
         }
 
@@ -30,44 +23,56 @@ export const onLoad = () => {
             storage.enableReadAll = true;
         }
 
-        unpatch = after("Guilds", GuildsComponent, ([props], res) => {
-            if (!res?.props?.children || !storage.enableReadAll) return res;
+        // Add an overlay button
+        const Overlay = findByProps("isOpen", "pushLayer");
+        if (!Overlay) {
+            showToast("❌ Failed to find overlay UI.", { type: "danger" });
+            return;
+        }
 
-            res.props.children.unshift(
-                <ReactNative.View style={{ padding: 10 }}>
-                    <ReactNative.TouchableOpacity
+        unpatch = after("pushLayer", Overlay, ([props], res) => {
+            if (!storage.enableReadAll) return res;
+
+            return (
+                <>
+                    {res}
+                    <ReactNative.View
                         style={{
-                            backgroundColor: storage.enableReadAll ? "#5865F2" : "#888888",
-                            padding: 10,
-                            borderRadius: 5,
+                            position: "absolute",
+                            bottom: 50,
+                            right: 20,
+                            backgroundColor: "#5865F2",
+                            padding: 12,
+                            borderRadius: 25,
                             alignItems: "center",
-                        }}
-                        disabled={!storage.enableReadAll}
-                        onPress={() => {
-                            try {
-                                const channels = findByProps("getMutableGuilds")?.getMutableGuilds?.();
-                                if (!channels) return;
-
-                                Object.keys(channels).forEach((guildId) => {
-                                    const channelId = channels[guildId]?.channels?.find?.((c) => !c.is_read)?.id;
-                                    if (channelId) ChannelActions.ack(channelId);
-                                });
-
-                                showToast("✅ All messages marked as read!", { type: "success" });
-                            } catch (err) {
-                                console.error("[Read All] Error:", err);
-                                showToast("❌ Error marking messages as read.", { type: "danger" });
-                            }
+                            elevation: 5,
                         }}
                     >
-                        <ReactNative.Text style={{ color: "#FFFFFF" }}>
-                            {storage.enableReadAll ? "📩 Read All Messages" : "❌ Disabled"}
-                        </ReactNative.Text>
-                    </ReactNative.TouchableOpacity>
-                </ReactNative.View>
-            );
+                        <ReactNative.TouchableOpacity
+                            onPress={() => {
+                                try {
+                                    const channels = findByProps("getMutableGuilds")?.getMutableGuilds?.();
+                                    if (!channels) return;
 
-            return res;
+                                    Object.keys(channels).forEach((guildId) => {
+                                        const channelId = channels[guildId]?.channels?.find?.((c) => !c.is_read)?.id;
+                                        if (channelId) ChannelActions.ack(channelId);
+                                    });
+
+                                    showToast("✅ All messages marked as read!", { type: "success" });
+                                } catch (err) {
+                                    console.error("[Read All] Error:", err);
+                                    showToast("❌ Error marking messages as read.", { type: "danger" });
+                                }
+                            }}
+                        >
+                            <ReactNative.Text style={{ color: "#FFFFFF", fontWeight: "bold" }}>
+                                📩 Read All
+                            </ReactNative.Text>
+                        </ReactNative.TouchableOpacity>
+                    </ReactNative.View>
+                </>
+            );
         });
 
     } catch (err) {
