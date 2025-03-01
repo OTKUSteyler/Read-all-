@@ -2,9 +2,11 @@ import { showToast, ToastType } from "@vendetta/ui/toasts";
 
 export default {
   onLoad: () => {
-    showToast("Read All Messages Plugin Loaded!", ToastType.SUCCESS);
+    showToast("Plugin Enabled!", ToastType.SUCCESS);
+    console.log("Read All Messages Plugin Loaded!");
   },
   onUnload: () => {
-    showToast("Plugin Unloaded!", ToastType.INFO);
+    showToast("Plugin Disabled!", ToastType.INFO);
+    console.log("Read All Messages Plugin Unloaded!");
   },
 };
