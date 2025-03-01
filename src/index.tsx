@@ -7,58 +7,80 @@ import Settings from "./Settings";
 let unpatch: (() => void) | undefined;
 
 export const onLoad = () => {
-    const ChannelActions = findByProps("ack", "ackMessage");
+    try {
+        showToast("Loading Read All Messages Plugin...", { type: "info" });
 
-    if (!ChannelActions) {
-        showToast("Failed to find required Discord functions.", { type: "danger" });
-        return;
+        const ChannelActions = findByProps("ack", "ackMessage");
+
+        if (!ChannelActions) {
+            showToast("Failed to find Discord functions.", { type: "danger" });
+            return;
+        }
+
+        const GuildsComponent = findByProps("Guilds", "GuildsList");
+
+        if (!GuildsComponent?.Guilds) {
+            showToast("Failed to find the server list UI.", { type: "danger" });
+            return;
+        }
+
+        unpatch = after("Guilds", GuildsComponent, ([props], res) => {
+            if (!res?.props?.children) return res;
+
+            res.props.children.unshift(
+                <ReactNative.View style={{ padding: 10 }}>
+                    <ReactNative.TouchableOpacity
+                        style={{
+                            backgroundColor: "#5865F2",
+                            padding: 10,
+                            borderRadius: 5,
+                            alignItems: "center",
+                        }}
+                        onPress={() => {
+                            try {
+                                const channels = findByProps("getMutableGuilds")?.getMutableGuilds?.();
+                                if (!channels) return;
+
+                                Object.keys(channels).forEach((guildId) => {
+                                    const channelId = channels[guildId]?.channels?.find?.((c) => c.is_read === false)?.id;
+                                    if (channelId) ChannelActions.ack(channelId);
+                                });
+
+                                showToast("All messages marked as read!", { type: "success" });
+                            } catch (err) {
+                                console.error("[Read All] Error:", err);
+                                showToast("Error marking messages as read.", { type: "danger" });
+                            }
+                        }}
+                    >
+                        <ReactNative.Text style={{ color: "#FFFFFF" }}>📩 Read All Messages</ReactNative.Text>
+                    </ReactNative.TouchableOpacity>
+                </ReactNative.View>
+            );
+
+            showToast("Read All Messages Button Added!", { type: "success" });
+
+            return res;
+        });
+
+    } catch (err) {
+        console.error("[Read All] Plugin Load Error:", err);
+        showToast("Plugin Load Failed!", { type: "danger" });
     }
-
-    // Find the component responsible for the server list
-    const GuildsComponent = findByProps("Guilds", "GuildsList");
-
-    if (!GuildsComponent?.Guilds) {
-        showToast("Failed to find the server list UI.", { type: "danger" });
-        return;
-    }
-
-    unpatch = after("Guilds", GuildsComponent, ([props], res) => {
-        if (!res?.props?.children) return res;
-
-        res.props.children.unshift(
-            <ReactNative.View style={{ padding: 10 }}>
-                <ReactNative.TouchableOpacity
-                    style={{
-                        backgroundColor: "#5865F2",
-                        padding: 10,
-                        borderRadius: 5,
-                        alignItems: "center",
-                    }}
-                    onPress={() => {
-                        const channels = findByProps("getMutableGuilds")?.getMutableGuilds?.();
-                        if (!channels) return;
-
-                        Object.keys(channels).forEach((guildId) => {
-                            const channelId = channels[guildId]?.channels?.find?.((c) => c.is_read === false)?.id;
-                            if (channelId) ChannelActions.ack(channelId);
-                        });
-
-                        showToast("All messages marked as read!", { type: "success" });
-                    }}
-                >
-                    <ReactNative.Text style={{ color: "#FFFFFF" }}>📩 Read All Messages</ReactNative.Text>
-                </ReactNative.TouchableOpacity>
-            </ReactNative.View>
-        );
-
-        return res;
-    });
-
-    showToast("Read All Messages Button Added to Server List!", { type: "success" });
 };
 
 export const onUnload = () => {
-    if (unpatch) unpatch();
+    try {
+        showToast("Unloading Read All Messages Plugin...", { type: "info" });
+
+        if (unpatch) {
+            unpatch();
+            showToast("Plugin Successfully Unloaded!", { type: "success" });
+        }
+    } catch (err) {
+        console.error("[Read All] Unload Error:", err);
+        showToast("Error during Unload!", { type: "danger" });
+    }
 };
 
 export const settings = Settings;
