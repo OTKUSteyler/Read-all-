@@ -2,7 +2,7 @@ import { showToast } from "@vendetta/ui/toasts";
 
 export default {
   onLoad: () => {
-    showToast("Read All Messages Plugin Enabled!", { type: like 
+    showToast("Read All Messages Plugin Enabled!", { type:
 `getAssetIDByName("ic_check_24px")`
     ;
     
