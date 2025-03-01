@@ -9,8 +9,10 @@ let unpatch: (() => void) | undefined;
 
 export const onLoad = () => {
     try {
-        // Find the function responsible for marking messages as read
+        // Debugging: Inspect ChannelActions and available methods
         const ChannelActions = findByProps("ack", "ackMessage");
+        console.log("[Read All] ChannelActions:", ChannelActions); // Log to inspect ChannelActions
+
         if (!ChannelActions?.ack) {
             console.error("[Read All] 'ack' function not found in ChannelActions:", ChannelActions);
             showToast("Failed to find Discord message functions.", { type: "danger" });
@@ -50,9 +52,8 @@ export const onLoad = () => {
                                 if (channels) {
                                     Object.values(channels).forEach((channel) => {
                                         if (!channel.is_read) {
-                                            // Debugging: Log the channel ID being marked as read
                                             console.log(`[Read All] Marking channel ${channel.id} as read.`);
-                                            ChannelActions.ack(channel.id);
+                                            ChannelActions.ack(channel.id); // Use the correct function after inspection
                                         }
                                     });
                                 }
