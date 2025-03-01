@@ -3,6 +3,7 @@ import { findByProps } from "@vendetta/metro";
 import { React, ReactNative } from "@vendetta/metro/common";
 import { showToast } from "@vendetta/ui/toasts";
 import Settings from "./Settings";
+import { storage } from "@vendetta/plugin";
 
 let unpatch: (() => void) | undefined;
 
@@ -11,21 +12,24 @@ export const onLoad = () => {
         showToast("Loading Read All Messages Plugin...", { type: "info" });
 
         const ChannelActions = findByProps("ack", "ackMessage");
-
         if (!ChannelActions) {
             showToast("Failed to find Discord functions.", { type: "danger" });
             return;
         }
 
         const GuildsComponent = findByProps("Guilds", "GuildsList");
-
         if (!GuildsComponent?.Guilds) {
             showToast("Failed to find the server list UI.", { type: "danger" });
             return;
         }
 
+        // Default to enabled if not set
+        if (storage.enableReadAll === undefined) {
+            storage.enableReadAll = true;
+        }
+
         unpatch = after("Guilds", GuildsComponent, ([props], res) => {
-            if (!res?.props?.children) return res;
+            if (!res?.props?.children || !storage.enableReadAll) return res;
 
             res.props.children.unshift(
                 <ReactNative.View style={{ padding: 10 }}>
@@ -58,8 +62,6 @@ export const onLoad = () => {
                 </ReactNative.View>
             );
 
-            showToast("Read All Messages Button Added!", { type: "success" });
-
             return res;
         });
 
@@ -71,8 +73,6 @@ export const onLoad = () => {
 
 export const onUnload = () => {
     try {
-        showToast("Unloading Read All Messages Plugin...", { type: "info" });
-
         if (unpatch) {
             unpatch();
             showToast("Plugin Successfully Unloaded!", { type: "success" });
