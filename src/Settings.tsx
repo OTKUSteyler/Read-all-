@@ -1,21 +1,27 @@
-import { React, ReactNative } from "@vendetta/metro/common";
+import { Text, View } from "@vendetta/metro/common";
+import { Switch } from "@vendetta/ui/components";
 import { storage } from "@vendetta/plugin";
 
 const Settings = () => {
-    const [enabled, setEnabled] = React.useState(storage.enableReadAll ?? true);
+    // Set the default value for enabling/disabling the "Read All" functionality
+    const enableReadAll = storage.enableReadAll ?? true;
 
-    const toggleEnable = () => {
-        storage.enableReadAll = !enabled;
-        setEnabled(!enabled);
+    // Function to toggle the "Read All" feature on/off
+    const toggleReadAll = () => {
+        storage.enableReadAll = !enableReadAll;
     };
 
     return (
-        <ReactNative.View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-            <ReactNative.Text style={{ fontSize: 16, fontWeight: "bold", marginBottom: 10 }}>
-                Enable Read All Messages
-            </ReactNative.Text>
-            <ReactNative.Switch value={enabled} onValueChange={toggleEnable} />
-        </ReactNative.View>
+        <View style={{ padding: 16 }}>
+            <Text style={{ fontSize: 16, fontWeight: "bold", marginBottom: 8 }}>
+                Read All Settings
+            </Text>
+
+            <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 16 }}>
+                <Text style={{ flex: 1 }}>Enable "Read All" Functionality</Text>
+                <Switch value={enableReadAll} onValueChange={toggleReadAll} />
+            </View>
+        </View>
     );
 };
 
