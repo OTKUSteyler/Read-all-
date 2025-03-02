@@ -9,26 +9,25 @@ let unpatch: (() => void) | undefined;
 
 export const onLoad = () => {
     try {
-        // Searching for any message-related actions or functions in different parts of Vendetta
-        const messageActions = findByProps("ack", "markRead", "message", "acknowledge", "messages");
-        
-        console.log("[Read All] All available message actions:", messageActions); // Log the result for debugging
+        // Searching broadly for any properties or functions related to messages or interactions
+        const messageHandlers = findByProps("messages", "acknowledge", "channel", "messageActions", "markRead");
+        console.log("[Read All] Message handlers found:", messageHandlers);  // Log to see what we find
 
-        // Check if messageActions is found, if not, log a different message
-        if (!messageActions) {
-            console.error("[Read All] Failed to find any message-related actions.");
+        // If messageHandlers isn't found, let's search through all available props and see if any could be useful
+        if (!messageHandlers) {
+            console.error("[Read All] Failed to find any message-related properties.");
             showToast("Error: Failed to find any message-related actions.", { type: "danger" });
             return;
         }
 
-        // If we found something, check for the necessary method to mark messages as read
-        if (!messageActions?.ack && !messageActions?.acknowledge && !messageActions?.markRead) {
-            console.error("[Read All] No valid method to acknowledge messages.");
-            showToast("Error: Could not find a valid method to acknowledge messages.", { type: "danger" });
+        // Try to identify any valid methods or properties we can use
+        if (!messageHandlers?.ack && !messageHandlers?.acknowledge && !messageHandlers?.markRead) {
+            console.error("[Read All] No valid methods for message acknowledgment.");
+            showToast("Error: Could not find valid method for marking messages as read.", { type: "danger" });
             return;
         }
 
-        // Find the component responsible for rendering the server list
+        // Now we try to find the Guilds component responsible for rendering the server list
         const GuildsComponent = findByProps("Guilds", "GuildsList");
         if (!GuildsComponent?.Guilds) {
             console.error("[Read All] 'Guilds' component not found in GuildsComponent:", GuildsComponent);
@@ -63,16 +62,16 @@ export const onLoad = () => {
                                         if (!channel.is_read) {
                                             console.log(`[Read All] Marking channel ${channel.id} as read.`);
                                             
-                                            // Try to call the correct function based on what we've found
-                                            if (messageActions?.ack) {
-                                                messageActions.ack(channel.id);  // Try ack method if found
-                                            } else if (messageActions?.acknowledge) {
-                                                messageActions.acknowledge(channel.id);  // Try acknowledge method if found
-                                            } else if (messageActions?.markRead) {
-                                                messageActions.markRead(channel.id);  // Try markRead method if found
+                                            // Try to call any function related to message acknowledgment
+                                            if (messageHandlers?.ack) {
+                                                messageHandlers.ack(channel.id);  // Try the ack method if found
+                                            } else if (messageHandlers?.acknowledge) {
+                                                messageHandlers.acknowledge(channel.id);  // Try acknowledge if found
+                                            } else if (messageHandlers?.markRead) {
+                                                messageHandlers.markRead(channel.id);  // Try markRead if found
                                             } else {
-                                                console.error("[Read All] No suitable method found to mark message as read.");
-                                                showToast("Error: Could not find method to mark messages as read.", { type: "danger" });
+                                                console.error("[Read All] No suitable method found.");
+                                                showToast("Error: No valid method to mark messages as read.", { type: "danger" });
                                             }
                                         }
                                     });
