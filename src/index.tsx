@@ -9,27 +9,19 @@ let unpatch: (() => void) | undefined;
 
 export const onLoad = () => {
     try {
-        // Find ChannelActions object and log its properties to inspect its contents
-        const ChannelActions = findByProps("ack", "ackMessage"); // Try with relevant props
-        console.log("[Read All] ChannelActions:", ChannelActions); // Inspect ChannelActions object
+        // Attempting to find ChannelActions or any relevant action related to message acknowledgment
+        const possibleActions = findByProps("ackMessage", "markRead", "acknowledge", "channelActions");
 
-        if (!ChannelActions) {
-            console.error("[Read All] ChannelActions is undefined");
-            showToast("Failed to find ChannelActions.", { type: "danger" });
+        console.log("[Read All] Possible Actions:", possibleActions);  // Log the result
+
+        if (!possibleActions) {
+            console.error("[Read All] Failed to find possible message acknowledgment functions.");
+            showToast("Failed to find message acknowledgment functions.", { type: "danger" });
             return;
         }
 
-        // Log all available properties in ChannelActions to understand its structure
-        Object.keys(ChannelActions).forEach((key) => {
-            console.log(`[Read All] ChannelActions function: ${key}`);
-        });
-
-        // Find the function to mark messages as read (this might have a different name)
-        if (!ChannelActions?.ack) {
-            console.error("[Read All] 'ack' function not found in ChannelActions.");
-            showToast("Failed to find 'ack' function in ChannelActions.", { type: "danger" });
-            return;
-        }
+        // Proceed with the found actions (use the correct function based on your logs)
+        const ChannelActions = possibleActions;  // Adjust if specific property is found within this object
 
         // Find the component responsible for rendering the server list
         const GuildsComponent = findByProps("Guilds", "GuildsList");
@@ -65,9 +57,8 @@ export const onLoad = () => {
                                     Object.values(channels).forEach((channel) => {
                                         if (!channel.is_read) {
                                             console.log(`[Read All] Marking channel ${channel.id} as read.`);
-                                            // Use the correct function after inspecting ChannelActions
-                                            // Replace ChannelActions.ack with the correct function if needed
-                                            ChannelActions.ack?.(channel.id);  // Replace with the correct method if ack is missing
+                                            // Replace this with the correct method after inspecting possibleActions
+                                            possibleActions?.ack?.(channel.id);  // Adjust if needed
                                         }
                                     });
                                 }
