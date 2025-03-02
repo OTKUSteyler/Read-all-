@@ -10,18 +10,22 @@ let unpatch: (() => void) | undefined;
 export const onLoad = () => {
     try {
         // Attempting to find ChannelActions or any relevant action related to message acknowledgment
-        const possibleActions = findByProps("ackMessage", "markRead", "acknowledge", "channelActions");
+        const ChannelActions = findByProps("ack", "ackMessage", "messages", "markRead", "channelActions");
+        
+        console.log("[Read All] ChannelActions object:", ChannelActions);  // Log the result for debugging
 
-        console.log("[Read All] Possible Actions:", possibleActions);  // Log the result
-
-        if (!possibleActions) {
-            console.error("[Read All] Failed to find possible message acknowledgment functions.");
-            showToast("Failed to find message acknowledgment functions.", { type: "danger" });
+        if (!ChannelActions) {
+            console.error("[Read All] Failed to find ChannelActions.");
+            showToast("Error: Failed to find ChannelActions.", { type: "danger" });
             return;
         }
 
-        // Proceed with the found actions (use the correct function based on your logs)
-        const ChannelActions = possibleActions;  // Adjust if specific property is found within this object
+        // Check if ack exists in ChannelActions, otherwise, use a fallback method
+        if (!ChannelActions.ack) {
+            console.error("[Read All] 'ack' method not found in ChannelActions.");
+            showToast("Error: Could not find 'ack' method.", { type: "danger" });
+            return;
+        }
 
         // Find the component responsible for rendering the server list
         const GuildsComponent = findByProps("Guilds", "GuildsList");
@@ -57,8 +61,8 @@ export const onLoad = () => {
                                     Object.values(channels).forEach((channel) => {
                                         if (!channel.is_read) {
                                             console.log(`[Read All] Marking channel ${channel.id} as read.`);
-                                            // Replace this with the correct method after inspecting possibleActions
-                                            possibleActions?.ack?.(channel.id);  // Adjust if needed
+                                            // Use the 'ack' method to mark the message as read
+                                            ChannelActions.ack(channel.id);  // Adjust this if another method is found
                                         }
                                     });
                                 }
