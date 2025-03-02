@@ -11,17 +11,21 @@ export const onLoad = () => {
     try {
         // Attempting to find ChannelActions or any relevant action related to message acknowledgment
         const ChannelActions = findByProps("ack", "ackMessage", "messages", "markRead", "channelActions");
-        
+
         console.log("[Read All] ChannelActions object:", ChannelActions);  // Log the result for debugging
 
-        if (!ChannelActions) {
-            console.error("[Read All] Failed to find ChannelActions.");
-            showToast("Error: Failed to find ChannelActions.", { type: "danger" });
+        // Log everything that could be related to marking messages as read
+        const allActions = findByProps("ack", "ackMessage", "messages", "markRead", "channelActions");
+        console.log("[Read All] All available actions related to message ack:", allActions);
+
+        // Check if ChannelActions and ack are found, else log all related functions
+        if (!allActions) {
+            console.error("[Read All] Failed to find any message actions.");
+            showToast("Error: Failed to find any message actions.", { type: "danger" });
             return;
         }
 
-        // Check if ack exists in ChannelActions, otherwise, use a fallback method
-        if (!ChannelActions.ack) {
+        if (!ChannelActions?.ack) {
             console.error("[Read All] 'ack' method not found in ChannelActions.");
             showToast("Error: Could not find 'ack' method.", { type: "danger" });
             return;
@@ -61,8 +65,18 @@ export const onLoad = () => {
                                     Object.values(channels).forEach((channel) => {
                                         if (!channel.is_read) {
                                             console.log(`[Read All] Marking channel ${channel.id} as read.`);
-                                            // Use the 'ack' method to mark the message as read
-                                            ChannelActions.ack(channel.id);  // Adjust this if another method is found
+                                            
+                                            // Check for all possible methods to mark the message as read
+                                            if (ChannelActions?.ack) {
+                                                ChannelActions.ack(channel.id);  // Try the ack method if it exists
+                                            } else if (ChannelActions?.ackMessage) {
+                                                ChannelActions.ackMessage(channel.id);  // Check for ackMessage if available
+                                            } else if (ChannelActions?.markRead) {
+                                                ChannelActions.markRead(channel.id);  // Try markRead as a fallback
+                                            } else {
+                                                console.error("[Read All] No suitable method found to mark message as read.");
+                                                showToast("Error: Could not find method to mark messages as read.", { type: "danger" });
+                                            }
                                         }
                                     });
                                 }
