@@ -1,5 +1,5 @@
 import { after } from "@vendetta/patcher";
-import { findByProps, findByName, metro } from "@vendetta/metro";
+import { findByProps, findByStore } from "@vendetta/metro";
 import { React, ReactNative } from "@vendetta/metro/common";
 import { showToast } from "@vendetta/ui/toasts";
 import { storage } from "@vendetta/plugin";
@@ -9,52 +9,39 @@ let unpatch: (() => void) | undefined;
 
 export const onLoad = () => {
     try {
-        // Debugging: Search for message-related actions
-        console.log("[Read All] Searching for message-related properties...");
+        console.log("[Read All] Searching for message-related functions...");
 
-        // Attempt to locate message-related actions using known properties
-        let MessageActions = findByProps("ack", "ackMessage", "acknowledge", "markRead");
-        if (!MessageActions) MessageActions = findByName("MessageActions");
-
+        // Attempt to find Message Actions
+        const MessageActions = findByProps("ack", "ackMessage", "acknowledge", "markRead");
         console.log("[Read All] Found MessageActions:", MessageActions);
 
-        if (!MessageActions) {
-            console.error("[Read All] Failed to find message-related actions.");
-            showToast("Error: Could not find message-related actions.", { type: "danger" });
+        // Find Message Store (to ensure message-related data is accessible)
+        const MessageStore = findByStore("MessageStore");
+        console.log("[Read All] Found MessageStore:", MessageStore);
 
-            // Attempt a manual scan for debugging
-            Object.values(metro.modules).forEach((mod) => {
-                if (mod?.exports) {
-                    const keys = Object.keys(mod.exports);
-                    if (keys.some((key) => key.includes("ack") || key.includes("read") || key.includes("message"))) {
-                        console.log("[Debug] Possible module found:", keys);
-                    }
-                }
-            });
-
+        if (!MessageActions || !MessageStore) {
+            console.error("[Read All] Could not find necessary message-related functions.");
+            showToast("Error: Message functions not found!", { type: "danger" });
             return;
         }
 
         // Identify the correct function for marking messages as read
         const ackFunction = MessageActions.ack || MessageActions.ackMessage || MessageActions.acknowledge || MessageActions.markRead;
-
         if (!ackFunction) {
             console.error("[Read All] No valid function found for marking messages as read.");
-            showToast("Error: No valid function found for marking messages as read.", { type: "danger" });
+            showToast("Error: No valid message acknowledgment function found.", { type: "danger" });
             return;
         }
 
-        console.log("[Read All] Successfully found message acknowledgment function:", ackFunction);
-
-        // Find the Guilds component for rendering the server list
+        // Find the component responsible for rendering the server list
         const GuildsComponent = findByProps("Guilds", "GuildsList");
         if (!GuildsComponent?.Guilds) {
-            console.error("[Read All] 'Guilds' component not found in GuildsComponent:", GuildsComponent);
+            console.error("[Read All] 'Guilds' component not found.");
             showToast("Failed to find the server list UI.", { type: "danger" });
             return;
         }
 
-        // Set default setting
+        // Set default setting if not already set
         if (storage.enableReadAll === undefined) {
             storage.enableReadAll = true;
         }
