@@ -3,31 +3,30 @@ import { findByProps } from "@vendetta/metro";
 import { React, ReactNative } from "@vendetta/metro/common";
 import { showToast } from "@vendetta/ui/toasts";
 import { storage } from "@vendetta/plugin";
-import Settings from "./Settings";
+import Settings from "./Settings";  // Import the settings file
 
 let unpatch: (() => void) | undefined;
 
 export const onLoad = () => {
     try {
-        // Searching broadly for any properties or functions related to messages or interactions
-        const messageHandlers = findByProps("messages", "acknowledge", "channel", "messageActions", "markRead");
-        console.log("[Read All] Message handlers found:", messageHandlers);  // Log to see what we find
+        // Search for possible message-related actions
+        const messageActions = findByProps("messages", "acknowledge", "channel", "messageActions", "markRead");
+        console.log("[Read All] Message handlers found:", messageActions); // Log to see what we find
 
-        // If messageHandlers isn't found, let's search through all available props and see if any could be useful
-        if (!messageHandlers) {
+        // Check for valid message actions
+        if (!messageActions) {
             console.error("[Read All] Failed to find any message-related properties.");
             showToast("Error: Failed to find any message-related actions.", { type: "danger" });
             return;
         }
 
-        // Try to identify any valid methods or properties we can use
-        if (!messageHandlers?.ack && !messageHandlers?.acknowledge && !messageHandlers?.markRead) {
+        if (!messageActions?.ack && !messageActions?.acknowledge && !messageActions?.markRead) {
             console.error("[Read All] No valid methods for message acknowledgment.");
             showToast("Error: Could not find valid method for marking messages as read.", { type: "danger" });
             return;
         }
 
-        // Now we try to find the Guilds component responsible for rendering the server list
+        // Find the Guilds component for rendering the server list
         const GuildsComponent = findByProps("Guilds", "GuildsList");
         if (!GuildsComponent?.Guilds) {
             console.error("[Read All] 'Guilds' component not found in GuildsComponent:", GuildsComponent);
@@ -35,7 +34,7 @@ export const onLoad = () => {
             return;
         }
 
-        // Set default setting if not already set
+        // Set the default setting for "Read All"
         if (storage.enableReadAll === undefined) {
             storage.enableReadAll = true;
         }
@@ -62,13 +61,13 @@ export const onLoad = () => {
                                         if (!channel.is_read) {
                                             console.log(`[Read All] Marking channel ${channel.id} as read.`);
                                             
-                                            // Try to call any function related to message acknowledgment
-                                            if (messageHandlers?.ack) {
-                                                messageHandlers.ack(channel.id);  // Try the ack method if found
-                                            } else if (messageHandlers?.acknowledge) {
-                                                messageHandlers.acknowledge(channel.id);  // Try acknowledge if found
-                                            } else if (messageHandlers?.markRead) {
-                                                messageHandlers.markRead(channel.id);  // Try markRead if found
+                                            // Try to call the appropriate function for acknowledgment
+                                            if (messageActions?.ack) {
+                                                messageActions.ack(channel.id);  // Try the ack method if found
+                                            } else if (messageActions?.acknowledge) {
+                                                messageActions.acknowledge(channel.id);  // Try acknowledge if found
+                                            } else if (messageActions?.markRead) {
+                                                messageActions.markRead(channel.id);  // Try markRead if found
                                             } else {
                                                 console.error("[Read All] No suitable method found.");
                                                 showToast("Error: No valid method to mark messages as read.", { type: "danger" });
