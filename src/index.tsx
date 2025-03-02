@@ -3,25 +3,30 @@ import { findByProps } from "@vendetta/metro";
 import { React, ReactNative } from "@vendetta/metro/common";
 import { showToast } from "@vendetta/ui/toasts";
 import { storage } from "@vendetta/plugin";
-import Settings from "./Settings";  // Import the settings file
+import Settings from "./Settings"; // Import the settings file
 
 let unpatch: (() => void) | undefined;
 
 export const onLoad = () => {
     try {
-        // Search for possible message-related actions
+        // Try to find all message-related methods dynamically
         const messageActions = findByProps("messages", "acknowledge", "channel", "messageActions", "markRead");
-        console.log("[Read All] Message handlers found:", messageActions); // Log to see what we find
+        console.log("[Read All] Message Actions found:", messageActions); // Log all available methods
 
-        // Check for valid message actions
+        // If no methods were found, show an error
         if (!messageActions) {
             console.error("[Read All] Failed to find any message-related properties.");
             showToast("Error: Failed to find any message-related actions.", { type: "danger" });
             return;
         }
 
-        if (!messageActions?.ack && !messageActions?.acknowledge && !messageActions?.markRead) {
-            console.error("[Read All] No valid methods for message acknowledgment.");
+        // Log all the methods available on messageActions
+        console.log("[Read All] All methods found in messageActions:", Object.keys(messageActions));
+
+        // Check if any valid method to acknowledge messages exists
+        const ackFunction = messageActions.ack || messageActions.acknowledge || messageActions.markRead;
+        if (!ackFunction) {
+            console.error("[Read All] No valid method for marking messages as read.");
             showToast("Error: Could not find valid method for marking messages as read.", { type: "danger" });
             return;
         }
@@ -62,12 +67,8 @@ export const onLoad = () => {
                                             console.log(`[Read All] Marking channel ${channel.id} as read.`);
                                             
                                             // Try to call the appropriate function for acknowledgment
-                                            if (messageActions?.ack) {
-                                                messageActions.ack(channel.id);  // Try the ack method if found
-                                            } else if (messageActions?.acknowledge) {
-                                                messageActions.acknowledge(channel.id);  // Try acknowledge if found
-                                            } else if (messageActions?.markRead) {
-                                                messageActions.markRead(channel.id);  // Try markRead if found
+                                            if (ackFunction) {
+                                                ackFunction(channel.id);  // Use the first found method
                                             } else {
                                                 console.error("[Read All] No suitable method found.");
                                                 showToast("Error: No valid method to mark messages as read.", { type: "danger" });
