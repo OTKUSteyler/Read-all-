@@ -1,5 +1,5 @@
 import { after } from "@vendetta/patcher";
-import { findByProps, findByStore } from "@vendetta/metro";
+import { metro } from "@vendetta/metro";
 import { React, ReactNative } from "@vendetta/metro/common";
 import { showToast } from "@vendetta/ui/toasts";
 import { storage } from "@vendetta/plugin";
@@ -11,22 +11,20 @@ export const onLoad = () => {
     try {
         console.log("[Read All] Searching for message-related functions...");
 
-        // Attempt to find Message Actions
-        const MessageActions = findByProps("ack", "ackMessage", "acknowledge", "markRead");
+        // Replace 12345 with your actual module ID from Step 2
+        const MessageActions = metro.modules[12345]?.exports;
+
         console.log("[Read All] Found MessageActions:", MessageActions);
 
-        // Find Message Store (to ensure message-related data is accessible)
-        const MessageStore = findByStore("MessageStore");
-        console.log("[Read All] Found MessageStore:", MessageStore);
-
-        if (!MessageActions || !MessageStore) {
-            console.error("[Read All] Could not find necessary message-related functions.");
+        if (!MessageActions) {
+            console.error("[Read All] Failed to find MessageActions.");
             showToast("Error: Message functions not found!", { type: "danger" });
             return;
         }
 
         // Identify the correct function for marking messages as read
-        const ackFunction = MessageActions.ack || MessageActions.ackMessage || MessageActions.acknowledge || MessageActions.markRead;
+        const ackFunction = MessageActions.ack || MessageActions.ackMessage || MessageActions.markRead;
+
         if (!ackFunction) {
             console.error("[Read All] No valid function found for marking messages as read.");
             showToast("Error: No valid message acknowledgment function found.", { type: "danger" });
@@ -34,7 +32,7 @@ export const onLoad = () => {
         }
 
         // Find the component responsible for rendering the server list
-        const GuildsComponent = findByProps("Guilds", "GuildsList");
+        const GuildsComponent = metro.findByProps("Guilds", "GuildsList");
         if (!GuildsComponent?.Guilds) {
             console.error("[Read All] 'Guilds' component not found.");
             showToast("Failed to find the server list UI.", { type: "danger" });
@@ -54,22 +52,43 @@ export const onLoad = () => {
                 <ReactNative.TouchableOpacity
                     onPress={() => {
                         try {
-                            const guilds = findByProps("getGuilds")?.getGuilds?.();
+                            console.log("[Read All] Fetching all guilds...");
+
+                            const GuildStore = metro.findByProps("getGuilds");
+                            if (!GuildStore) {
+                                console.error("[Read All] GuildStore not found.");
+                                showToast("Error: Guilds not found!", { type: "danger" });
+                                return;
+                            }
+
+                            const guilds = GuildStore.getGuilds();
                             if (!guilds) {
                                 console.error("[Read All] No guilds found.");
+                                showToast("Error: No guilds found!", { type: "danger" });
                                 return;
                             }
 
                             Object.values(guilds).forEach((guild) => {
-                                const channels = guild.channels;
-                                if (channels) {
-                                    Object.values(channels).forEach((channel) => {
-                                        if (!channel.is_read) {
-                                            console.log(`[Read All] Marking channel ${channel.id} as read.`);
-                                            ackFunction(channel.id);
-                                        }
-                                    });
+                                console.log(`[Read All] Processing guild: ${guild.id} - ${guild.name}`);
+
+                                const ChannelStore = metro.findByProps("getChannels");
+                                if (!ChannelStore) {
+                                    console.error("[Read All] ChannelStore not found.");
+                                    return;
                                 }
+
+                                const channels = ChannelStore.getChannels(guild.id);
+                                if (!channels) {
+                                    console.error(`[Read All] No channels found for guild ${guild.id}`);
+                                    return;
+                                }
+
+                                Object.values(channels).forEach((channel) => {
+                                    if (!channel.is_read) {
+                                        console.log(`[Read All] Marking channel ${channel.id} as read.`);
+                                        ackFunction(channel.id);
+                                    }
+                                });
                             });
 
                             showToast("All messages marked as read!", { type: "success" });
