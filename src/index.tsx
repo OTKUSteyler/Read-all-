@@ -1,35 +1,50 @@
 import { after } from "@vendetta/patcher";
-import { findByProps } from "@vendetta/metro";
+import { findByProps, findByName, metro } from "@vendetta/metro";
 import { React, ReactNative } from "@vendetta/metro/common";
 import { showToast } from "@vendetta/ui/toasts";
 import { storage } from "@vendetta/plugin";
-import Settings from "./Settings"; // Import the settings file
+import Settings from "./Settings";
 
 let unpatch: (() => void) | undefined;
 
 export const onLoad = () => {
     try {
-        // Try to find all message-related methods dynamically
-        const messageActions = findByProps("messages", "acknowledge", "channel", "messageActions", "markRead");
-        console.log("[Read All] Message Actions found:", messageActions); // Log all available methods
+        // Debugging: Search for message-related actions
+        console.log("[Read All] Searching for message-related properties...");
 
-        // If no methods were found, show an error
-        if (!messageActions) {
-            console.error("[Read All] Failed to find any message-related properties.");
-            showToast("Error: Failed to find any message-related actions.", { type: "danger" });
+        // Attempt to locate message-related actions using known properties
+        let MessageActions = findByProps("ack", "ackMessage", "acknowledge", "markRead");
+        if (!MessageActions) MessageActions = findByName("MessageActions");
+
+        console.log("[Read All] Found MessageActions:", MessageActions);
+
+        if (!MessageActions) {
+            console.error("[Read All] Failed to find message-related actions.");
+            showToast("Error: Could not find message-related actions.", { type: "danger" });
+
+            // Attempt a manual scan for debugging
+            Object.values(metro.modules).forEach((mod) => {
+                if (mod?.exports) {
+                    const keys = Object.keys(mod.exports);
+                    if (keys.some((key) => key.includes("ack") || key.includes("read") || key.includes("message"))) {
+                        console.log("[Debug] Possible module found:", keys);
+                    }
+                }
+            });
+
             return;
         }
 
-        // Log all the methods available on messageActions
-        console.log("[Read All] All methods found in messageActions:", Object.keys(messageActions));
+        // Identify the correct function for marking messages as read
+        const ackFunction = MessageActions.ack || MessageActions.ackMessage || MessageActions.acknowledge || MessageActions.markRead;
 
-        // Check if any valid method to acknowledge messages exists
-        const ackFunction = messageActions.ack || messageActions.acknowledge || messageActions.markRead;
         if (!ackFunction) {
-            console.error("[Read All] No valid method for marking messages as read.");
-            showToast("Error: Could not find valid method for marking messages as read.", { type: "danger" });
+            console.error("[Read All] No valid function found for marking messages as read.");
+            showToast("Error: No valid function found for marking messages as read.", { type: "danger" });
             return;
         }
+
+        console.log("[Read All] Successfully found message acknowledgment function:", ackFunction);
 
         // Find the Guilds component for rendering the server list
         const GuildsComponent = findByProps("Guilds", "GuildsList");
@@ -39,7 +54,7 @@ export const onLoad = () => {
             return;
         }
 
-        // Set the default setting for "Read All"
+        // Set default setting
         if (storage.enableReadAll === undefined) {
             storage.enableReadAll = true;
         }
@@ -48,7 +63,6 @@ export const onLoad = () => {
         unpatch = after("Guilds", GuildsComponent, ([props], res) => {
             if (!res?.props?.children || !storage.enableReadAll) return res;
 
-            // Create the "Read All" button
             const readAllButton = (
                 <ReactNative.TouchableOpacity
                     onPress={() => {
@@ -65,14 +79,7 @@ export const onLoad = () => {
                                     Object.values(channels).forEach((channel) => {
                                         if (!channel.is_read) {
                                             console.log(`[Read All] Marking channel ${channel.id} as read.`);
-                                            
-                                            // Try to call the appropriate function for acknowledgment
-                                            if (ackFunction) {
-                                                ackFunction(channel.id);  // Use the first found method
-                                            } else {
-                                                console.error("[Read All] No suitable method found.");
-                                                showToast("Error: No valid method to mark messages as read.", { type: "danger" });
-                                            }
+                                            ackFunction(channel.id);
                                         }
                                     });
                                 }
@@ -98,7 +105,6 @@ export const onLoad = () => {
                 </ReactNative.TouchableOpacity>
             );
 
-            // Insert the button at the top of the server list
             res.props.children.unshift(readAllButton);
 
             return res;
