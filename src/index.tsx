@@ -1,5 +1,5 @@
 import { after } from "@vendetta/patcher";
-import { metro } from "@vendetta/metro";
+import { findByProps } from "@vendetta/metro";
 import { React, ReactNative } from "@vendetta/metro/common";
 import { showToast } from "@vendetta/ui/toasts";
 import { storage } from "@vendetta/plugin";
@@ -11,8 +11,8 @@ export const onLoad = () => {
     try {
         console.log("[Read All] Searching for message-related functions...");
 
-        // Replace 12345 with your actual module ID from Step 2
-        const MessageActions = metro.modules[12345]?.exports;
+        // Find Discord message functions
+        const MessageActions = findByProps("ack", "ackMessage", "markRead");
 
         console.log("[Read All] Found MessageActions:", MessageActions);
 
@@ -22,7 +22,7 @@ export const onLoad = () => {
             return;
         }
 
-        // Identify the correct function for marking messages as read
+        // Use the correct function for marking messages as read
         const ackFunction = MessageActions.ack || MessageActions.ackMessage || MessageActions.markRead;
 
         if (!ackFunction) {
@@ -32,7 +32,7 @@ export const onLoad = () => {
         }
 
         // Find the component responsible for rendering the server list
-        const GuildsComponent = metro.findByProps("Guilds", "GuildsList");
+        const GuildsComponent = findByProps("Guilds", "GuildsList");
         if (!GuildsComponent?.Guilds) {
             console.error("[Read All] 'Guilds' component not found.");
             showToast("Failed to find the server list UI.", { type: "danger" });
@@ -54,7 +54,7 @@ export const onLoad = () => {
                         try {
                             console.log("[Read All] Fetching all guilds...");
 
-                            const GuildStore = metro.findByProps("getGuilds");
+                            const GuildStore = findByProps("getGuilds");
                             if (!GuildStore) {
                                 console.error("[Read All] GuildStore not found.");
                                 showToast("Error: Guilds not found!", { type: "danger" });
@@ -71,7 +71,7 @@ export const onLoad = () => {
                             Object.values(guilds).forEach((guild) => {
                                 console.log(`[Read All] Processing guild: ${guild.id} - ${guild.name}`);
 
-                                const ChannelStore = metro.findByProps("getChannels");
+                                const ChannelStore = findByProps("getChannels");
                                 if (!ChannelStore) {
                                     console.error("[Read All] ChannelStore not found.");
                                     return;
