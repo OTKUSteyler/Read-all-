@@ -4,10 +4,13 @@ import { Switch } from "@vendetta/ui/components";
 import { storage } from "@vendetta/plugin";
 
 const Settings = () => {
-    // Initialize state with the current setting or default to true
-    const [isEnabled, setIsEnabled] = useState(storage.enableReadAll ?? true);
+    // Ensure settings are initialized
+    if (storage.enableReadAll === undefined) {
+        storage.enableReadAll = true;
+    }
 
-    // Function to toggle the "Read All" feature on/off
+    const [isEnabled, setIsEnabled] = useState(storage.enableReadAll);
+
     const toggleReadAll = () => {
         const newValue = !isEnabled;
         setIsEnabled(newValue);
@@ -15,7 +18,7 @@ const Settings = () => {
     };
 
     return (
-        <View style={{ padding: 16 }}>
+        <View style={{ padding: 20 }}>
             <Text style={{ fontSize: 16, fontWeight: "bold", marginBottom: 10 }}>
                 Enable "Read All" Button
             </Text>
