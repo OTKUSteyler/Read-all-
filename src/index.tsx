@@ -1,5 +1,5 @@
 import { after } from "@vendetta/patcher";
-import { findByProps } from "@vendetta/metro";
+import { findByProps, findByStoreName } from "@vendetta/metro";
 import { React, ReactNative } from "@vendetta/metro/common";
 import { showToast } from "@vendetta/ui/toasts";
 import { storage } from "@vendetta/plugin";
@@ -9,23 +9,68 @@ let unpatch;
 
 export const onLoad = () => {
     try {
-        // Retrieve the Guilds component
-        const Guilds = findByProps("Guilds")?.Guilds;
-        if (!Guilds) {
-            console.error("Server list UI missing!");
+        console.log("[Read All] Loading plugin...");
+
+        // Find the message acknowledgment function
+        const MessageActions = findByProps("ack", "ackMessage", "markRead");
+        const ackFunction = MessageActions?.ack ?? MessageActions?.ackMessage ?? MessageActions?.markRead;
+
+        if (!ackFunction) {
+            console.error("[Read All] No valid function found for marking messages as read.");
+            showToast("Error: No valid message acknowledgment function found.", { type: "danger" });
+            return;
+        }
+
+        // Find the Guild Store
+        const GuildStore = findByStoreName("GuildStore");
+        if (!GuildStore) {
+            console.error("[Read All] GuildStore not found.");
+            showToast("Error: Guilds not found!", { type: "danger" });
+            return;
+        }
+
+        // Find the Server List UI Component
+        const GuildsComponent = findByProps("Guilds", "GuildsList");
+        if (!GuildsComponent?.Guilds) {
+            console.error("[Read All] Server list UI missing!");
             showToast("Error: Server list UI missing!", { type: "danger" });
             return;
         }
 
-        // Patch the Guilds component to inject the "Read All" button
-        unpatch = after("default", Guilds, ([props], res) => {
+        console.log("[Read All] Found required components, injecting button...");
+
+        // Patch the server list UI
+        unpatch = after("Guilds", GuildsComponent, ([props], res) => {
             if (!res?.props?.children || !storage.enableReadAll) return res;
 
             const readAllButton = (
                 <ReactNative.TouchableOpacity
                     onPress={() => {
-                        // Implement the functionality to mark all messages as read
-                        showToast("All messages marked as read!", { type: "success" });
+                        try {
+                            const guilds = GuildStore.getGuilds();
+                            Object.values(guilds).forEach((guild) => {
+                                console.log(`[Read All] Processing guild: ${guild.id} - ${guild.name}`);
+
+                                const ChannelStore = findByStoreName("ChannelStore");
+                                if (!ChannelStore) {
+                                    console.error("[Read All] ChannelStore not found.");
+                                    return;
+                                }
+
+                                const channels = ChannelStore.getChannels(guild.id);
+                                Object.values(channels).forEach((channel) => {
+                                    if (!channel.is_read) {
+                                        console.log(`[Read All] Marking channel ${channel.id} as read.`);
+                                        ackFunction(channel.id);
+                                    }
+                                });
+                            });
+
+                            showToast("All messages marked as read!", { type: "success" });
+                        } catch (err) {
+                            console.error("[Read All] Error marking messages as read:", err);
+                            showToast("Error marking messages as read.", { type: "danger" });
+                        }
                     }}
                     style={{
                         marginBottom: 10,
@@ -36,7 +81,7 @@ export const onLoad = () => {
                     }}
                 >
                     <ReactNative.Text style={{ color: "#FFFFFF", fontWeight: "bold" }}>
-                        Read All
+                        📩 Read All
                     </ReactNative.Text>
                 </ReactNative.TouchableOpacity>
             );
@@ -45,17 +90,17 @@ export const onLoad = () => {
             return res;
         });
 
-        console.log("Plugin loaded successfully.");
-    } catch (error) {
-        console.error("Error loading plugin:", error);
-        showToast("Error loading plugin!", { type: "danger" });
+        console.log("[Read All] Plugin loaded successfully.");
+    } catch (err) {
+        console.error("[Read All] Plugin Load Error:", err);
+        showToast("Plugin Load Failed!", { type: "danger" });
     }
 };
 
 export const onUnload = () => {
     if (unpatch) {
         unpatch();
-        showToast("Plugin unloaded.", { type: "success" });
+        showToast("Plugin Successfully Unloaded!", { type: "success" });
     }
 };
 
