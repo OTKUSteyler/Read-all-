@@ -1,5 +1,5 @@
 import { after } from "@vendetta/patcher";
-import { findByStoreName, findByProps } from "@vendetta/metro";
+import { findByProps, findByStoreName } from "@vendetta/metro";
 import { React, ReactNative } from "@vendetta/metro/common";
 import { showToast } from "@vendetta/ui/toasts";
 import { storage } from "@vendetta/plugin";
@@ -9,37 +9,48 @@ let unpatch: (() => void) | undefined;
 
 export const onLoad = () => {
     try {
-        // Find message-related functions correctly
-        const MessageActions = findByProps("ack", "ackMessage", "markRead");
-        const ackFunction = MessageActions?.ack ?? MessageActions?.ackMessage ?? MessageActions?.markRead;
+        console.log("[Read All] Initializing...");
 
+        // Get MessageActions using findByProps properly
+        const MessageActions = findByProps("ack") || findByProps("ackMessage") || findByProps("markRead");
+
+        if (!MessageActions) {
+            console.error("[Read All] MessageActions not found!");
+            showToast("Error: Message functions not found!", { type: "danger" });
+            return;
+        }
+
+        const ackFunction = MessageActions.ack || MessageActions.ackMessage || MessageActions.markRead;
         if (!ackFunction) {
+            console.error("[Read All] No valid message acknowledgment function found.");
             showToast("Error: No valid message acknowledgment function found.", { type: "danger" });
             return;
         }
 
-        // Find GuildStore and ChannelStore properly
+        // Use findByStoreName for GuildStore and ChannelStore
         const GuildStore = findByStoreName("GuildStore");
         const ChannelStore = findByStoreName("ChannelStore");
 
         if (!GuildStore || !ChannelStore) {
-            showToast("Error: Guild or Channel store not found!", { type: "danger" });
+            console.error("[Read All] GuildStore or ChannelStore not found.");
+            showToast("Error: Could not fetch guild/channel data!", { type: "danger" });
             return;
         }
 
-        // Find the Guilds component
+        // Get the component responsible for rendering the server list
         const GuildsComponent = findByProps("Guilds", "GuildsList");
         if (!GuildsComponent?.Guilds) {
+            console.error("[Read All] 'Guilds' component not found.");
             showToast("Failed to find the server list UI.", { type: "danger" });
             return;
         }
 
-        // Set default setting
+        // Ensure storage default value
         if (storage.enableReadAll === undefined) {
             storage.enableReadAll = true;
         }
 
-        // Patch the Guilds component to add the "Read All" button
+        // Patch GuildsComponent to inject the "Read All" button
         unpatch = after("Guilds", GuildsComponent, ([props], res) => {
             if (!res?.props?.children || !storage.enableReadAll) return res;
 
@@ -47,13 +58,16 @@ export const onLoad = () => {
                 <ReactNative.TouchableOpacity
                     onPress={() => {
                         try {
+                            console.log("[Read All] Fetching all guilds...");
                             const guilds = GuildStore.getGuilds();
                             if (!guilds) {
+                                console.error("[Read All] No guilds found.");
                                 showToast("Error: No guilds found!", { type: "danger" });
                                 return;
                             }
 
                             Object.values(guilds).forEach((guild) => {
+                                console.log(`[Read All] Processing guild: ${guild.id} - ${guild.name}`);
                                 const channels = ChannelStore.getChannels(guild.id);
                                 if (!channels) return;
 
@@ -65,7 +79,8 @@ export const onLoad = () => {
                             });
 
                             showToast("All messages marked as read!", { type: "success" });
-                        } catch {
+                        } catch (err) {
+                            console.error("[Read All] Error marking messages as read:", err);
                             showToast("Error marking messages as read.", { type: "danger" });
                         }
                     }}
@@ -83,12 +98,15 @@ export const onLoad = () => {
                 </ReactNative.TouchableOpacity>
             );
 
-            res.props.children.unshift(readAllButton);
+            // Ensure the button is added to the UI
+            res.props.children = [readAllButton, ...res.props.children];
+
             return res;
         });
 
-        showToast("Read All plugin loaded successfully!", { type: "success" });
-    } catch {
+        console.log("[Read All] Plugin loaded successfully.");
+    } catch (err) {
+        console.error("[Read All] Plugin Load Error:", err);
         showToast("Plugin Load Failed!", { type: "danger" });
     }
 };
@@ -99,7 +117,8 @@ export const onUnload = () => {
             unpatch();
             showToast("Plugin Successfully Unloaded!", { type: "success" });
         }
-    } catch {
+    } catch (err) {
+        console.error("[Read All] Unload Error:", err);
         showToast("Error during Unload!", { type: "danger" });
     }
 };
