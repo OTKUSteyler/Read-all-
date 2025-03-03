@@ -9,24 +9,22 @@ let unpatch: (() => void) | undefined;
 
 export const onLoad = () => {
     try {
-        console.log("[Read All] 🔍 Searching for message functions...");
+        console.log("[Read All] 🔍 Searching for functions...");
 
-        // Find MessageActions
         const MessageActions = findByProps("ack") || findByProps("ackMessage") || findByProps("markRead");
         if (!MessageActions) {
             console.error("[Read All] ❌ MessageActions not found.");
-            showToast("Error: Message functions not found!", { type: "danger" });
+            showToast("Error: Message functions missing!", { type: "danger" });
             return;
         }
 
         const ackFunction = MessageActions.ack || MessageActions.ackMessage || MessageActions.markRead;
         if (!ackFunction) {
-            console.error("[Read All] ❌ No valid function for marking messages as read.");
-            showToast("Error: No valid acknowledgment function!", { type: "danger" });
+            console.error("[Read All] ❌ No valid function found.");
+            showToast("Error: No valid ack function!", { type: "danger" });
             return;
         }
 
-        // Get Stores
         const GuildStore = findByStoreName("GuildStore");
         const ChannelStore = findByStoreName("ChannelStore");
 
@@ -36,8 +34,8 @@ export const onLoad = () => {
             return;
         }
 
-        // Find UI Component
-        const GuildsComponent = findByName("Guilds");
+        // ✅ Ensure correct UI Component
+        const GuildsComponent = findByProps("Guilds")?.Guilds || findByName("Guilds");
         if (!GuildsComponent) {
             console.error("[Read All] ❌ Could not find 'Guilds' UI component.");
             showToast("Error: Server list UI missing!", { type: "danger" });
@@ -46,12 +44,11 @@ export const onLoad = () => {
 
         console.log("[Read All] ✅ Found UI Component, injecting button...");
 
-        // Ensure default setting
         if (storage.enableReadAll === undefined) {
             storage.enableReadAll = true;
         }
 
-        // Patch UI
+        // ✅ Patch UI Correctly
         unpatch = after("default", GuildsComponent, ([props], res) => {
             if (!res?.props?.children || !storage.enableReadAll) return res;
 
