@@ -11,17 +11,17 @@ export const onLoad = () => {
     try {
         console.log("[Read All] Initializing...");
 
-        // Get MessageActions correctly
+        // Find MessageActions dynamically
         const MessageActions = findByProps("ack") || findByProps("ackMessage") || findByProps("markRead");
         if (!MessageActions) {
-            console.error("[Read All] MessageActions not found!");
+            console.error("[Read All] ❌ Failed to find MessageActions.");
             showToast("Error: Message functions not found!", { type: "danger" });
             return;
         }
 
         const ackFunction = MessageActions.ack || MessageActions.ackMessage || MessageActions.markRead;
         if (!ackFunction) {
-            console.error("[Read All] No valid message acknowledgment function found.");
+            console.error("[Read All] ❌ No valid message acknowledgment function found.");
             showToast("Error: No valid message acknowledgment function found.", { type: "danger" });
             return;
         }
@@ -31,7 +31,7 @@ export const onLoad = () => {
         const ChannelStore = findByStoreName("ChannelStore");
 
         if (!GuildStore || !ChannelStore) {
-            console.error("[Read All] GuildStore or ChannelStore not found.");
+            console.error("[Read All] ❌ GuildStore or ChannelStore not found.");
             showToast("Error: Could not fetch guild/channel data!", { type: "danger" });
             return;
         }
@@ -39,10 +39,12 @@ export const onLoad = () => {
         // Find the UI component correctly
         const GuildsComponent = findByName("Guilds");
         if (!GuildsComponent) {
-            console.error("[Read All] 'Guilds' component not found.");
+            console.error("[Read All] ❌ 'Guilds' UI component not found.");
             showToast("Error: Failed to find the server list UI.", { type: "danger" });
             return;
         }
+
+        console.log("[Read All] ✅ GuildsComponent found, patching UI...");
 
         // Ensure storage default value
         if (storage.enableReadAll === undefined) {
@@ -59,19 +61,23 @@ export const onLoad = () => {
                         try {
                             console.log("[Read All] Fetching all guilds...");
                             const guilds = GuildStore.getGuilds();
-                            if (!guilds) {
-                                console.error("[Read All] No guilds found.");
+                            if (!guilds || Object.keys(guilds).length === 0) {
+                                console.error("[Read All] ❌ No guilds found.");
                                 showToast("Error: No guilds found!", { type: "danger" });
                                 return;
                             }
 
                             Object.values(guilds).forEach((guild) => {
-                                console.log(`[Read All] Processing guild: ${guild.id} - ${guild.name}`);
+                                console.log(`[Read All] 🔄 Processing guild: ${guild.id} - ${guild.name}`);
                                 const channels = ChannelStore.getChannels(guild.id);
-                                if (!channels) return;
+                                if (!channels || Object.keys(channels).length === 0) {
+                                    console.warn(`[Read All] ⚠️ No channels found for guild ${guild.id}`);
+                                    return;
+                                }
 
                                 Object.values(channels).forEach((channel) => {
                                     if (!channel.is_read) {
+                                        console.log(`[Read All] ✅ Marking channel ${channel.id} as read.`);
                                         ackFunction(channel.id);
                                     }
                                 });
@@ -79,7 +85,7 @@ export const onLoad = () => {
 
                             showToast("All messages marked as read!", { type: "success" });
                         } catch (err) {
-                            console.error("[Read All] Error marking messages as read:", err);
+                            console.error("[Read All] ❌ Error marking messages as read:", err);
                             showToast("Error marking messages as read.", { type: "danger" });
                         }
                     }}
@@ -103,9 +109,9 @@ export const onLoad = () => {
             return res;
         });
 
-        console.log("[Read All] Plugin loaded successfully.");
+        console.log("[Read All] ✅ Plugin loaded successfully.");
     } catch (err) {
-        console.error("[Read All] Plugin Load Error:", err);
+        console.error("[Read All] ❌ Plugin Load Error:", err);
         showToast("Plugin Load Failed!", { type: "danger" });
     }
 };
@@ -117,7 +123,7 @@ export const onUnload = () => {
             showToast("Plugin Successfully Unloaded!", { type: "success" });
         }
     } catch (err) {
-        console.error("[Read All] Unload Error:", err);
+        console.error("[Read All] ❌ Unload Error:", err);
         showToast("Error during Unload!", { type: "danger" });
     }
 };
