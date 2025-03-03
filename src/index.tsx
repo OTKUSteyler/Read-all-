@@ -11,13 +11,17 @@ export const onLoad = () => {
     try {
         console.log("[Read All] Loading plugin...");
 
-        // Find the message acknowledgment function
+        // Find the message acknowledgment function with better logic
         const MessageActions = findByProps("ack", "ackMessage", "markRead");
-        const ackFunction = MessageActions?.ack ?? MessageActions?.ackMessage ?? MessageActions?.markRead;
+        let ackFunction = null;
 
-        if (!ackFunction) {
+        if (MessageActions) {
+            ackFunction = MessageActions.ack ?? MessageActions.ackMessage ?? MessageActions.markRead;
+        }
+
+        if (!ackFunction || typeof ackFunction !== "function") {
             console.error("[Read All] No valid function found for marking messages as read.");
-            showToast("Error: No valid message acknowledgment function found.", { type: "danger" });
+            showToast("Error: Message acknowledgment function not found!", { type: "danger" });
             return;
         }
 
