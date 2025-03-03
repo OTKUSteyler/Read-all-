@@ -1,5 +1,5 @@
 import { after } from "@vendetta/patcher";
-import { findByProps, findByStoreName } from "@vendetta/metro";
+import { findByProps, findByStoreName, findByName } from "@vendetta/metro";
 import { React, ReactNative } from "@vendetta/metro/common";
 import { showToast } from "@vendetta/ui/toasts";
 import { storage } from "@vendetta/plugin";
@@ -11,9 +11,8 @@ export const onLoad = () => {
     try {
         console.log("[Read All] Initializing...");
 
-        // Get MessageActions using findByProps properly
+        // Get MessageActions correctly
         const MessageActions = findByProps("ack") || findByProps("ackMessage") || findByProps("markRead");
-
         if (!MessageActions) {
             console.error("[Read All] MessageActions not found!");
             showToast("Error: Message functions not found!", { type: "danger" });
@@ -27,7 +26,7 @@ export const onLoad = () => {
             return;
         }
 
-        // Use findByStoreName for GuildStore and ChannelStore
+        // Get Guild and Channel store properly
         const GuildStore = findByStoreName("GuildStore");
         const ChannelStore = findByStoreName("ChannelStore");
 
@@ -37,11 +36,11 @@ export const onLoad = () => {
             return;
         }
 
-        // Get the component responsible for rendering the server list
-        const GuildsComponent = findByProps("Guilds", "GuildsList");
-        if (!GuildsComponent?.Guilds) {
+        // Find the UI component correctly
+        const GuildsComponent = findByName("Guilds");
+        if (!GuildsComponent) {
             console.error("[Read All] 'Guilds' component not found.");
-            showToast("Failed to find the server list UI.", { type: "danger" });
+            showToast("Error: Failed to find the server list UI.", { type: "danger" });
             return;
         }
 
@@ -50,8 +49,8 @@ export const onLoad = () => {
             storage.enableReadAll = true;
         }
 
-        // Patch GuildsComponent to inject the "Read All" button
-        unpatch = after("Guilds", GuildsComponent, ([props], res) => {
+        // Patch the UI to add the "Read All" button
+        unpatch = after("default", GuildsComponent, ([props], res) => {
             if (!res?.props?.children || !storage.enableReadAll) return res;
 
             const readAllButton = (
@@ -98,7 +97,7 @@ export const onLoad = () => {
                 </ReactNative.TouchableOpacity>
             );
 
-            // Ensure the button is added to the UI
+            // Add button to UI
             res.props.children = [readAllButton, ...res.props.children];
 
             return res;
