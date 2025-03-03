@@ -1,5 +1,5 @@
 import { after } from "@vendetta/patcher";
-import { findByProps } from "@vendetta/metro";
+import { findByStoreName, findByProps } from "@vendetta/metro";
 import { React, ReactNative } from "@vendetta/metro/common";
 import { showToast } from "@vendetta/ui/toasts";
 import { storage } from "@vendetta/plugin";
@@ -9,38 +9,32 @@ let unpatch: (() => void) | undefined;
 
 export const onLoad = () => {
     try {
-        console.log("[Read All] Searching for message-related functions...");
-
-        // Debug: Find correct message-related functions
+        // Find message-related functions correctly
         const MessageActions = findByProps("ack", "ackMessage", "markRead");
-        console.log("[Read All] Debug MessageActions:", MessageActions);
-
-        if (!MessageActions) {
-            console.error("[Read All] Failed to find MessageActions.");
-            showToast("Error: Message functions not found!", { type: "danger" });
-            return;
-        }
-
-        // Find the correct function for marking messages as read
         const ackFunction = MessageActions?.ack ?? MessageActions?.ackMessage ?? MessageActions?.markRead;
 
         if (!ackFunction) {
-            console.error("[Read All] No valid function found for marking messages as read.");
             showToast("Error: No valid message acknowledgment function found.", { type: "danger" });
             return;
         }
 
-        // Find the component responsible for rendering the server list
-        const GuildsComponent = findByProps("Guilds", "GuildsList");
-        console.log("[Read All] Debug GuildsComponent:", GuildsComponent);
+        // Find GuildStore and ChannelStore properly
+        const GuildStore = findByStoreName("GuildStore");
+        const ChannelStore = findByStoreName("ChannelStore");
 
+        if (!GuildStore || !ChannelStore) {
+            showToast("Error: Guild or Channel store not found!", { type: "danger" });
+            return;
+        }
+
+        // Find the Guilds component
+        const GuildsComponent = findByProps("Guilds", "GuildsList");
         if (!GuildsComponent?.Guilds) {
-            console.error("[Read All] 'Guilds' component not found.");
             showToast("Failed to find the server list UI.", { type: "danger" });
             return;
         }
 
-        // Set default setting if not already set
+        // Set default setting
         if (storage.enableReadAll === undefined) {
             storage.enableReadAll = true;
         }
@@ -53,56 +47,25 @@ export const onLoad = () => {
                 <ReactNative.TouchableOpacity
                     onPress={() => {
                         try {
-                            console.log("[Read All] Fetching all guilds...");
-
-                            const GuildStore = findByProps("getGuilds");
-                            console.log("[Read All] Debug GuildStore:", GuildStore);
-
-                            if (!GuildStore) {
-                                console.error("[Read All] GuildStore not found.");
-                                showToast("Error: Guilds not found!", { type: "danger" });
-                                return;
-                            }
-
                             const guilds = GuildStore.getGuilds();
-                            console.log("[Read All] Found guilds:", guilds);
-
                             if (!guilds) {
-                                console.error("[Read All] No guilds found.");
                                 showToast("Error: No guilds found!", { type: "danger" });
                                 return;
                             }
 
                             Object.values(guilds).forEach((guild) => {
-                                console.log(`[Read All] Processing guild: ${guild.id} - ${guild.name}`);
-
-                                const ChannelStore = findByProps("getChannels");
-                                console.log("[Read All] Debug ChannelStore:", ChannelStore);
-
-                                if (!ChannelStore) {
-                                    console.error("[Read All] ChannelStore not found.");
-                                    return;
-                                }
-
                                 const channels = ChannelStore.getChannels(guild.id);
-                                console.log(`[Read All] Found channels for guild ${guild.id}:`, channels);
-
-                                if (!channels) {
-                                    console.error(`[Read All] No channels found for guild ${guild.id}`);
-                                    return;
-                                }
+                                if (!channels) return;
 
                                 Object.values(channels).forEach((channel) => {
                                     if (!channel.is_read) {
-                                        console.log(`[Read All] Marking channel ${channel.id} as read.`);
                                         ackFunction(channel.id);
                                     }
                                 });
                             });
 
                             showToast("All messages marked as read!", { type: "success" });
-                        } catch (err) {
-                            console.error("[Read All] Error marking messages as read:", err);
+                        } catch {
                             showToast("Error marking messages as read.", { type: "danger" });
                         }
                     }}
@@ -124,9 +87,8 @@ export const onLoad = () => {
             return res;
         });
 
-        console.log("[Read All] Plugin loaded successfully.");
-    } catch (err) {
-        console.error("[Read All] Plugin Load Error:", err);
+        showToast("Read All plugin loaded successfully!", { type: "success" });
+    } catch {
         showToast("Plugin Load Failed!", { type: "danger" });
     }
 };
@@ -137,8 +99,7 @@ export const onUnload = () => {
             unpatch();
             showToast("Plugin Successfully Unloaded!", { type: "success" });
         }
-    } catch (err) {
-        console.error("[Read All] Unload Error:", err);
+    } catch {
         showToast("Error during Unload!", { type: "danger" });
     }
 };
