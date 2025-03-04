@@ -8,6 +8,7 @@ const Plugin = () => {
   const [messages, setMessages] = useState<any[]>([]);
   const [hasUnreadMessages, setHasUnreadMessages] = useState(false);
   const [isMessageListAvailable, setIsMessageListAvailable] = useState(false);
+  const [isServerListAvailable, setIsServerListAvailable] = useState(false);
 
   // Function to read all messages when the button is clicked
   const handleReadAllMessages = () => {
@@ -28,19 +29,27 @@ const Plugin = () => {
     console.log("All messages marked as read.");
   };
 
-  // Check if message list or server list UI is available
+  // Check if the message list or server list UI is available
   const checkUIAvailability = () => {
     const messageList = document.querySelector('[class*="messageList-"]'); // Check for message list
+    const serverList = document.querySelector('[class*="serverList-"]'); // Check for server list
+
     if (messageList) {
       setIsMessageListAvailable(true);
     } else {
       setIsMessageListAvailable(false);
     }
+
+    if (serverList) {
+      setIsServerListAvailable(true);
+    } else {
+      setIsServerListAvailable(false);
+    }
   };
 
   // Simulate loading unread messages and checking the UI
   useEffect(() => {
-    checkUIAvailability(); // Check if message list is available
+    checkUIAvailability(); // Check if message list and server list are available
 
     const fetchUnreadMessages = () => {
       // Replace this with actual API to fetch unread messages
@@ -61,16 +70,24 @@ const Plugin = () => {
 
   if (!isMounted) return <div>Plugin not loaded properly</div>;
 
-  if (!isMessageListAvailable) {
-    return <div>Message list UI is missing. Please select a channel or server.</div>;
+  // Return early if the server list UI is not available
+  if (!isServerListAvailable) {
+    return <div>Server list UI is missing. Please open the server list view.</div>;
   }
 
   return (
-    <div style={{ padding: "20px", backgroundColor: "#f0f0f0", borderRadius: "10px", position: "relative" }}>
-      <Button
-        onClick={handleReadAllMessages}
-        style={{ position: "absolute", top: "10px", right: "10px", zIndex: 999 }}
-      >
+    <div
+      style={{
+        padding: "20px",
+        backgroundColor: "#f0f0f0",
+        borderRadius: "10px",
+        position: "absolute",  // Make sure button is positioned correctly
+        top: "10px",
+        left: "10px",
+        zIndex: 9999,  // Ensure it appears on top
+      }}
+    >
+      <Button onClick={handleReadAllMessages}>
         Read All Messages
       </Button>
       <h2>{hasUnreadMessages ? "Unread Messages Available" : "No Unread Messages"}</h2>
