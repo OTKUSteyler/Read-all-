@@ -16,6 +16,7 @@ const Plugin = () => {
 
     if (!hasUnreadMessages) {
       console.log("No unread messages available.");
+      // Optionally display a notification or UI element indicating that there are no unread messages
       return;
     }
 
@@ -61,6 +62,7 @@ const Plugin = () => {
         console.log(`Found ${unreadMessages.length} unread messages.`);
       } else {
         console.log("No unread messages found.");
+        setHasUnreadMessages(false); // Make sure the flag is reset if there are no unread messages
       }
     };
 
