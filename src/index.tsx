@@ -18,15 +18,28 @@ function markAllMessagesRead() {
     console.log("[ReadAll] Marked all messages as read.");
 }
 
-// Function to inject the button into the sidebar
-function injectButton() {
-    console.log("[ReadAll] Injecting button...");
+// Function to find the sidebar component
+function findSidebarComponent(attempt = 1) {
+    console.log(`[ReadAll] Checking for sidebar component... (Attempt ${attempt})`);
 
     const Sidebar = findByProps("guilds", "wrapper");
+
     if (!Sidebar) {
-        console.error("[ReadAll] ERROR: Sidebar component not found!");
-        return;
+        if (attempt >= 10) {
+            console.error("[ReadAll] ERROR: Sidebar component not found. Aborting.");
+            return null;
+        }
+        return setTimeout(() => findSidebarComponent(attempt + 1), 500); // Retry after 500ms
     }
+
+    console.log("[ReadAll] Sidebar component found!");
+    injectButton(Sidebar);
+    return Sidebar;
+}
+
+// Function to inject the button into the sidebar
+function injectButton(Sidebar) {
+    console.log("[ReadAll] Injecting button...");
 
     after("default", Sidebar, ([props], res) => {
         if (!res) {
@@ -56,32 +69,13 @@ function injectButton() {
     console.log("[ReadAll] Button injected successfully.");
 }
 
-// Watch for UI updates and re-inject if needed
-let observer: MutationObserver | null = null;
-function watchForChanges() {
-    const sidebarElement = document.querySelector('[class*="guilds"]'); // Try to detect sidebar changes
-    if (!sidebarElement) {
-        console.error("[ReadAll] ERROR: Sidebar element not found!");
-        return;
-    }
-
-    observer = new MutationObserver(() => {
-        console.log("[ReadAll] Sidebar updated! Checking for button...");
-        injectButton(); // Re-inject button when sidebar changes
-    });
-
-    observer.observe(sidebarElement, { childList: true, subtree: true });
-}
-
 // Plugin startup
 export default {
     onLoad: () => {
         console.log("[ReadAll] Plugin loaded! Waiting for UI...");
-        injectButton();
-        watchForChanges(); // Start observing UI changes
+        setTimeout(() => findSidebarComponent(), 2000); // Delay initial search
     },
     onUnload: () => {
         console.log("[ReadAll] Plugin unloaded!");
-        if (observer) observer.disconnect(); // Stop observing when the plugin is disabled
     },
 };
