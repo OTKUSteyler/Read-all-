@@ -1,6 +1,5 @@
 import { after } from "@vendetta/patcher";
-import { findByProps } from "@vendetta/metro";
-import { storage } from "@vendetta/plugin";
+import { findByProps, findByName, findByDisplayName } from "@vendetta/metro";
 import { React } from "@vendetta/metro/common";
 import { Button } from "@vendetta/ui/components";
 
@@ -12,7 +11,6 @@ function markAllMessagesRead() {
         return;
     }
 
-    // Mark all messages as read
     Object.keys(ReadStateStore.getUnreadCount()).forEach((channelId) => {
         ReadStateStore.ack(channelId);
     });
@@ -20,39 +18,27 @@ function markAllMessagesRead() {
     console.log("[ReadAll] Marked all messages as read.");
 }
 
-function findSidebarComponent() {
-    console.log("[ReadAll] Searching for sidebar components...");
+function waitForSidebarComponent(callback: (component: any) => void) {
+    let attempts = 0;
+    const interval = setInterval(() => {
+        attempts++;
+        console.log(`[ReadAll] Checking for sidebar component... (Attempt ${attempts})`);
 
-    const possibleComponents = [
-        "GuildsList",
-        "Guilds",
-        "GuildSidebar",
-        "GuildContainer",
-        "Sidebar",
-        "ServerList",
-        "Servers",
-    ];
-
-    for (const name of possibleComponents) {
-        const component = findByProps(name);
-        if (component) {
-            console.log(`[ReadAll] Found component: ${name}`);
-            return component;
+        const Sidebar = findByProps("guilds", "wrapper");
+        if (Sidebar) {
+            console.log("[ReadAll] Sidebar component found!");
+            clearInterval(interval);
+            callback(Sidebar);
         }
-    }
 
-    console.error("[ReadAll] ERROR: No sidebar component found!");
-    return null;
+        if (attempts > 10) { // Stop after 10 attempts (~5 seconds)
+            console.error("[ReadAll] ERROR: Sidebar component not found. Aborting.");
+            clearInterval(interval);
+        }
+    }, 500); // Check every 500ms
 }
 
-function injectButton() {
-    const Sidebar = findSidebarComponent();
-
-    if (!Sidebar) {
-        console.error("[ReadAll] ERROR: Sidebar component not found. Aborting injection.");
-        return;
-    }
-
+function injectButton(Sidebar: any) {
     console.log("[ReadAll] Injecting button into sidebar...");
 
     after("default", Sidebar, ([props], res) => {
@@ -81,8 +67,8 @@ function injectButton() {
 // Plugin startup
 export default {
     onLoad: () => {
-        console.log("[ReadAll] Plugin loaded!");
-        injectButton();
+        console.log("[ReadAll] Plugin loaded! Waiting for UI...");
+        waitForSidebarComponent(injectButton);
     },
     onUnload: () => {
         console.log("[ReadAll] Plugin unloaded!");
