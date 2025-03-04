@@ -12,7 +12,7 @@ export const onLoad = () => {
         console.log("[Read All] Searching for message-related functions...");
 
         // Find message acknowledgment functions
-        const MessageActions = findByProps("ack") || findByProps("ackMessage") || findByProps("markRead");
+        const MessageActions = findByProps("ack", "ackMessage", "markRead");
         const ackFunction = MessageActions?.ack ?? MessageActions?.ackMessage ?? MessageActions?.markRead;
 
         if (!ackFunction) {
@@ -21,36 +21,32 @@ export const onLoad = () => {
             return;
         }
 
-        // Find the server list UI
-        const GuildsComponent = findByProps("Guilds", "GuildsList");
-        if (!GuildsComponent || !GuildsComponent.Guilds) {
-            console.error("[Read All] Server list UI missing.");
-            showToast("Error: Server list UI missing!", { type: "danger" });
+        // Find the Guild Store and ensure the UI is present
+        const GuildStore = findByStoreName("GuildStore");
+        if (!GuildStore) {
+            console.error("[Read All] GuildStore not found.");
+            showToast("Error: GuildStore missing!", { type: "danger" });
             return;
         }
 
-        // Fetch the actual UI component responsible for rendering servers
+        const guilds = GuildStore.getGuilds();
+        if (!guilds || Object.keys(guilds).length === 0) {
+            console.error("[Read All] No servers found.");
+            showToast("Error: No servers detected!", { type: "danger" });
+            return;
+        }
+
+        // Find the component responsible for rendering servers
         const ServerList = findByProps("getGuilds", "getGuildCount");
         if (!ServerList) {
             console.error("[Read All] Server List component not found.");
-            showToast("Error: Server List component not found!", { type: "danger" });
+            showToast("Error: Server List UI missing!", { type: "danger" });
             return;
         }
 
-        // Ensure setting is defined
-        if (storage.enableReadAll === undefined) {
-            storage.enableReadAll = true;
-        }
-
-        // Patch the Guilds component to add the "Read All" button
-        unpatch = after("Guilds", GuildsComponent, ([props], res) => {
+        // Patch the Server List UI to inject the "Read All" button
+        unpatch = after("getGuilds", ServerList, ([props], res) => {
             if (!res?.props?.children || !storage.enableReadAll) return res;
-
-            // Ensure the UI exists
-            if (!res.props.children || !Array.isArray(res.props.children)) {
-                console.error("[Read All] Server list UI is missing from props.");
-                return res;
-            }
 
             const readAllButton = (
                 <ReactNative.View style={{ padding: 10, alignItems: "center" }}>
@@ -58,20 +54,6 @@ export const onLoad = () => {
                         onPress={() => {
                             try {
                                 console.log("[Read All] Marking all messages as read...");
-
-                                const GuildStore = findByStoreName("GuildStore");
-                                if (!GuildStore) {
-                                    console.error("[Read All] GuildStore not found.");
-                                    showToast("Error: Guilds not found!", { type: "danger" });
-                                    return;
-                                }
-
-                                const guilds = GuildStore.getGuilds();
-                                if (!guilds) {
-                                    console.error("[Read All] No guilds found.");
-                                    showToast("Error: No guilds found!", { type: "danger" });
-                                    return;
-                                }
 
                                 Object.values(guilds).forEach((guild) => {
                                     console.log(`[Read All] Processing guild: ${guild.id}`);
@@ -116,7 +98,7 @@ export const onLoad = () => {
                 </ReactNative.View>
             );
 
-            // Insert the button at the top of the server list
+            // Inject the button at the top of the server list
             res.props.children.unshift(readAllButton);
             return res;
         });
