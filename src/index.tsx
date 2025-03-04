@@ -25,16 +25,16 @@ function markAllMessagesRead() {
   showToast(`✅ Marked ${unreadCount} messages as read!`);
 }
 
-// Inject button into the top of the server list
+// Inject button into Discord's sidebar instead of Guild List
 function injectButton() {
-  const GuildsList = findByProps("default", "guilds");
+  const Sidebar = findByProps("default", "sidebar");
 
-  if (!GuildsList) {
-    console.error("[ReadAll] Failed to find GuildsList.");
+  if (!Sidebar) {
+    console.error("[ReadAll] Failed to find Sidebar UI.");
     return;
   }
 
-  patch = after("default", GuildsList, ([props], res) => {
+  patch = after("default", Sidebar, ([props], res) => {
     if (!res) return res;
 
     res.props.children.unshift(
