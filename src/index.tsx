@@ -1,10 +1,11 @@
-import { getModule, React } from "@vendetta/metro";
+import { React, getModule } from "@vendetta/metro";
 import { Button } from "@vendetta/ui/components";
 import { useState, useEffect } from "react";
 
-// Import the icon image (make sure the path is correct)
-import readAllIcon from "https://betterthanbtmc.s-ul.eu/gGEqdVTL";  // Adjust path to assets if necessary
+// Import the icon image for the button (make sure this is correct)
+import readAllIcon from "https://betterthanbtmc.s-ul.eu/gGEqdVTL"; // Adjust path as necessary
 
+// Main plugin component
 const Plugin = () => {
   const [isMounted, setIsMounted] = useState(false);
   const [messages, setMessages] = useState<any[]>([]);
@@ -32,8 +33,8 @@ const Plugin = () => {
   // Effect to simulate fetching unread messages
   useEffect(() => {
     const fetchUnreadMessages = () => {
-      // Replace with actual API to fetch unread messages
-      const unreadMessages = [];  // Replace with your logic for fetching unread messages
+      // Replace with actual logic for fetching unread messages
+      const unreadMessages = [];  // Replace with real unread message fetching logic
 
       if (unreadMessages.length > 0) {
         setHasUnreadMessages(true);
@@ -89,11 +90,12 @@ const Plugin = () => {
   );
 };
 
+// Vendetta Plugin Setup
 export default {
   start() {
     console.log("Plugin started");
 
-    // Ensure your render point is correct (adjust if needed)
+    // Ensure the plugin is mounting correctly
     const ReactDOM = getModule(["render"]);
     const rootElement = document.getElementById("app-mount");
     if (rootElement) {
@@ -103,7 +105,7 @@ export default {
   stop() {
     console.log("Plugin stopped");
 
-    // Ensure React component is unmounted properly
+    // Ensure proper unmounting of the component
     const ReactDOM = getModule(["render"]);
     const rootElement = document.getElementById("app-mount");
     if (rootElement) {
