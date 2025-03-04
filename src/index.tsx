@@ -2,51 +2,64 @@ import { getModule, React, ReactDOM } from "@vendetta/metro";
 import { Button } from "@vendetta/ui/components";
 import { useState, useEffect } from "react";
 
-// Sample function for testing
+// Ensure the correct message UI context exists
 const Plugin = () => {
   const [isMounted, setIsMounted] = useState(false);
   const [messages, setMessages] = useState<any[]>([]);
   const [hasUnreadMessages, setHasUnreadMessages] = useState(false);
 
-  // Function to simulate marking messages as read
-  const handleReadAllMessages = () => {
-    console.log("Button clicked: Attempting to mark all messages as read");
+  const [isMessageListAvailable, setIsMessageListAvailable] = useState(false);
 
+  // Simulate the function to read all messages when the button is clicked
+  const handleReadAllMessages = () => {
     if (!hasUnreadMessages) {
       console.log("No unread messages available.");
       return;
     }
 
-    // If unread messages exist, mark them as read
+    console.log("Button clicked: Marking all messages as read");
+
+    // Mark messages as read (replace with actual logic)
     messages.forEach((message: any) => {
-      // Mark the message as read (replace this with actual Vendetta API logic)
       console.log(`Marking message ${message.id} as read`);
     });
 
-    setHasUnreadMessages(false); // Set state to reflect that messages are read
-    setMessages([]); // Clear the list of unread messages
-    console.log("All messages marked as read.");
+    setHasUnreadMessages(false);
+    setMessages([]);
   };
 
-  // Simulate loading unread messages
   useEffect(() => {
-    console.log("Plugin mounted: Loading messages");
+    // Check if the message list is available (if you are in a server or channel)
+    const checkMessageListAvailability = () => {
+      // Make sure we're on a page with a message list (i.e., a channel is selected)
+      const messageList = document.querySelector('[class*="messageList-"]');
+      if (messageList) {
+        setIsMessageListAvailable(true);
+      } else {
+        setIsMessageListAvailable(false);
+      }
+    };
 
-    // Simulate fetching unread messages (replace with actual Vendetta API logic)
-    const fetchedMessages = []; // Should be replaced with Vendetta's API to get unread messages
+    // Run the check every time the component mounts or updates
+    checkMessageListAvailability();
 
-    if (fetchedMessages.length > 0) {
+    // Simulate loading unread messages from Vendetta API (replace this with real API calls)
+    const unreadMessages = []; // Replace with real unread messages API call
+    if (unreadMessages.length > 0) {
       setHasUnreadMessages(true);
-      setMessages(fetchedMessages);
-      console.log(`Found ${fetchedMessages.length} unread messages.`);
-    } else {
-      console.log("No unread messages found.");
+      setMessages(unreadMessages);
+      console.log(`Found ${unreadMessages.length} unread messages.`);
     }
 
     setIsMounted(true);
+
   }, []);
 
   if (!isMounted) return <div>Plugin not loaded properly</div>;
+
+  if (!isMessageListAvailable) {
+    return <div>Message list UI is missing. Please select a channel or server.</div>;
+  }
 
   return (
     <div style={{ padding: "20px", backgroundColor: "#f0f0f0", borderRadius: "10px", position: "relative" }}>
@@ -72,15 +85,13 @@ export default {
   start() {
     console.log("Plugin started");
 
-    // Inject the Plugin component into the Discord UI
     const ReactDOM = getModule(["render"]);
-    ReactDOM.render(<Plugin />, document.getElementById("app-mount")); // Ensure app-mount exists
+    ReactDOM.render(<Plugin />, document.getElementById("app-mount"));
   },
   stop() {
     console.log("Plugin stopped");
 
-    // Cleanup code if necessary
     const ReactDOM = getModule(["render"]);
-    ReactDOM.unmountComponentAtNode(document.getElementById("app-mount")); // Adjust mount point if needed
+    ReactDOM.unmountComponentAtNode(document.getElementById("app-mount"));
   },
 };
