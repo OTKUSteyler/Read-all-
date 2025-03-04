@@ -1,5 +1,5 @@
 import { after } from "@vendetta/patcher";
-import { findByProps, findByName, findByDisplayName } from "@vendetta/metro";
+import { findByProps } from "@vendetta/metro";
 import { React } from "@vendetta/metro/common";
 import { Button } from "@vendetta/ui/components";
 
@@ -18,28 +18,15 @@ function markAllMessagesRead() {
     console.log("[ReadAll] Marked all messages as read.");
 }
 
-function waitForSidebarComponent(callback: (component: any) => void) {
-    let attempts = 0;
-    const interval = setInterval(() => {
-        attempts++;
-        console.log(`[ReadAll] Checking for sidebar component... (Attempt ${attempts})`);
+// Function to inject the button into the sidebar
+function injectButton() {
+    console.log("[ReadAll] Injecting button...");
 
-        const Sidebar = findByProps("guilds", "wrapper");
-        if (Sidebar) {
-            console.log("[ReadAll] Sidebar component found!");
-            clearInterval(interval);
-            callback(Sidebar);
-        }
-
-        if (attempts > 10) { // Stop after 10 attempts (~5 seconds)
-            console.error("[ReadAll] ERROR: Sidebar component not found. Aborting.");
-            clearInterval(interval);
-        }
-    }, 500); // Check every 500ms
-}
-
-function injectButton(Sidebar: any) {
-    console.log("[ReadAll] Injecting button into sidebar...");
+    const Sidebar = findByProps("guilds", "wrapper");
+    if (!Sidebar) {
+        console.error("[ReadAll] ERROR: Sidebar component not found!");
+        return;
+    }
 
     after("default", Sidebar, ([props], res) => {
         if (!res) {
@@ -47,10 +34,15 @@ function injectButton(Sidebar: any) {
             return res;
         }
 
-        console.log("[ReadAll] Injecting button...");
-        
+        // Ensure the button isn't injected multiple times
+        if (res.props.children.find((child) => child?.props?.id === "readall-button")) {
+            console.log("[ReadAll] Button already exists. Skipping re-injection.");
+            return res;
+        }
+
+        console.log("[ReadAll] Injecting button into sidebar...");
         res.props.children = [
-            <div style={{ padding: 10, marginBottom: 10 }}>
+            <div id="readall-button" style={{ padding: 10, marginBottom: 10 }}>
                 <Button onClick={markAllMessagesRead} style={{ width: "100%" }}>
                     ✅ Read All
                 </Button>
@@ -61,16 +53,35 @@ function injectButton(Sidebar: any) {
         return res;
     });
 
-    console.log("[ReadAll] Button injection complete.");
+    console.log("[ReadAll] Button injected successfully.");
+}
+
+// Watch for UI updates and re-inject if needed
+let observer: MutationObserver | null = null;
+function watchForChanges() {
+    const sidebarElement = document.querySelector('[class*="guilds"]'); // Try to detect sidebar changes
+    if (!sidebarElement) {
+        console.error("[ReadAll] ERROR: Sidebar element not found!");
+        return;
+    }
+
+    observer = new MutationObserver(() => {
+        console.log("[ReadAll] Sidebar updated! Checking for button...");
+        injectButton(); // Re-inject button when sidebar changes
+    });
+
+    observer.observe(sidebarElement, { childList: true, subtree: true });
 }
 
 // Plugin startup
 export default {
     onLoad: () => {
         console.log("[ReadAll] Plugin loaded! Waiting for UI...");
-        waitForSidebarComponent(injectButton);
+        injectButton();
+        watchForChanges(); // Start observing UI changes
     },
     onUnload: () => {
         console.log("[ReadAll] Plugin unloaded!");
+        if (observer) observer.disconnect(); // Stop observing when the plugin is disabled
     },
 };
