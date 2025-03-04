@@ -2,12 +2,14 @@ import { getModule, React, ReactDOM } from "@vendetta/metro";
 import { Button } from "@vendetta/ui/components";
 import { useState, useEffect } from "react";
 
+// Import the icon image (ensure you have the image in /assets)
+import readAllIcon from 'https://github.com/mwittrien/BetterDiscordAddons/blob/master/Plugins%2FReadAllNotificationsButton%2F_res%2Fcover.png';  // Ensure correct path for your project
+
 // Main plugin logic
 const Plugin = () => {
   const [isMounted, setIsMounted] = useState(false);
   const [messages, setMessages] = useState<any[]>([]);
   const [hasUnreadMessages, setHasUnreadMessages] = useState(false);
-  const [isMessageListAvailable, setIsMessageListAvailable] = useState(false);
   const [isServerListAvailable, setIsServerListAvailable] = useState(false);
 
   // Function to read all messages when the button is clicked
@@ -16,30 +18,22 @@ const Plugin = () => {
 
     if (!hasUnreadMessages) {
       console.log("No unread messages available.");
-      // Optionally display a notification or UI element indicating that there are no unread messages
-      return;
+      return;  // Early exit if no unread messages
     }
 
-    // Simulate marking messages as read (replace this with actual logic)
+    // Simulate marking messages as read (replace with actual logic)
     messages.forEach((message: any) => {
       console.log(`Marking message ${message.id} as read`);
     });
 
-    setHasUnreadMessages(false); // Reset state after marking as read
-    setMessages([]); // Clear messages
+    setHasUnreadMessages(false); // Reset after marking as read
+    setMessages([]); // Clear the messages array
     console.log("All messages marked as read.");
   };
 
-  // Check if the message list or server list UI is available
+  // Check if the server list UI is available
   const checkUIAvailability = () => {
-    const messageList = document.querySelector('[class*="messageList-"]'); // Check for message list
     const serverList = document.querySelector('[class*="serverList-"]'); // Check for server list
-
-    if (messageList) {
-      setIsMessageListAvailable(true);
-    } else {
-      setIsMessageListAvailable(false);
-    }
 
     if (serverList) {
       setIsServerListAvailable(true);
@@ -50,11 +44,11 @@ const Plugin = () => {
 
   // Simulate loading unread messages and checking the UI
   useEffect(() => {
-    checkUIAvailability(); // Check if message list and server list are available
+    checkUIAvailability(); // Check if server list is available
 
     const fetchUnreadMessages = () => {
       // Replace this with actual API to fetch unread messages
-      const unreadMessages = []; // Example: This should be replaced with real unread message fetching
+      const unreadMessages = []; // Example, replace with real unread messages fetch
 
       if (unreadMessages.length > 0) {
         setHasUnreadMessages(true);
@@ -62,17 +56,16 @@ const Plugin = () => {
         console.log(`Found ${unreadMessages.length} unread messages.`);
       } else {
         console.log("No unread messages found.");
-        setHasUnreadMessages(false); // Make sure the flag is reset if there are no unread messages
+        setHasUnreadMessages(false); // Make sure the flag is reset
       }
     };
 
     fetchUnreadMessages(); // Fetch unread messages
     setIsMounted(true); // Mark as mounted
-  }, []); // Empty dependency array ensures this runs once on mount
+  }, []); // Run once on mount
 
   if (!isMounted) return <div>Plugin not loaded properly</div>;
 
-  // Return early if the server list UI is not available
   if (!isServerListAvailable) {
     return <div>Server list UI is missing. Please open the server list view.</div>;
   }
@@ -80,16 +73,25 @@ const Plugin = () => {
   return (
     <div
       style={{
-        padding: "20px",
-        backgroundColor: "#f0f0f0",
-        borderRadius: "10px",
-        position: "absolute",  // Make sure button is positioned correctly
+        position: "absolute",  // Position the button at the top
         top: "10px",
         left: "10px",
-        zIndex: 9999,  // Ensure it appears on top
+        zIndex: 9999,
+        padding: "10px",
+        backgroundColor: "#f0f0f0",
+        borderRadius: "10px",
       }}
     >
       <Button onClick={handleReadAllMessages}>
+        <img
+          src={readAllIcon}
+          alt="Read All"
+          style={{
+            width: "24px",  // Size of the image icon
+            height: "24px",
+            marginRight: "8px", // Space between image and button text
+          }}
+        />
         Read All Messages
       </Button>
       <h2>{hasUnreadMessages ? "Unread Messages Available" : "No Unread Messages"}</h2>
