@@ -1,5 +1,5 @@
 import { after } from "@vendetta/patcher";
-import { findByProps, findByName, findAll } from "@vendetta/metro";
+import { findByProps, findByName } from "@vendetta/metro";
 import { React } from "@vendetta/metro/common";
 import { Button } from "@vendetta/ui/components";
 
@@ -18,64 +18,68 @@ function markAllMessagesRead() {
     console.log("[ReadAll] Marked all messages as read.");
 }
 
-// Function to scan for any sidebar-related components
+// Function to safely find the sidebar
 function findSidebarComponent(attempt = 1) {
-    console.log(`[ReadAll] Searching for Sidebar Component... (Attempt ${attempt})`);
+    try {
+        console.log(`[ReadAll] Searching for Sidebar Component... (Attempt ${attempt})`);
 
-    const allModules = findAll(() => true);
-    let SidebarComponent = null;
+        // Try to find the sidebar using known properties
+        const GuildsNav = findByProps("GuildsNav");
+        const Sidebar = findByProps("NavWrapper", "Sidebar");
 
-    for (const mod of allModules) {
-        if (mod && typeof mod === "object") {
-            for (const key in mod) {
-                if (key.toLowerCase().includes("sidebar") || key.toLowerCase().includes("guilds")) {
-                    SidebarComponent = mod[key];
-                    break;
-                }
-            }
+        if (GuildsNav) {
+            console.log("[ReadAll] Found GuildsNav component!");
+            injectButton(GuildsNav);
+            return;
         }
-        if (SidebarComponent) break;
-    }
 
-    if (!SidebarComponent) {
-        if (attempt >= 10) {
-            console.error("[ReadAll] ERROR: Sidebar component still not found. Aborting.");
-            return null;
+        if (Sidebar) {
+            console.log("[ReadAll] Found Sidebar component!");
+            injectButton(Sidebar);
+            return;
         }
-        return setTimeout(() => findSidebarComponent(attempt + 1), 500);
-    }
 
-    console.log("[ReadAll] Sidebar Component found! Injecting button...");
-    injectButton(SidebarComponent);
-    return SidebarComponent;
+        if (attempt >= 5) {
+            console.error("[ReadAll] ERROR: Sidebar component not found. Aborting.");
+            return;
+        }
+
+        setTimeout(() => findSidebarComponent(attempt + 1), 1000);
+    } catch (error) {
+        console.error("[ReadAll] CRITICAL ERROR:", error);
+    }
 }
 
-// Injects button dynamically
+// Inject button safely
 function injectButton(SidebarComponent) {
-    after("default", SidebarComponent, ([props], res) => {
-        if (!res) {
-            console.error("[ReadAll] ERROR: SidebarComponent returned empty.");
+    try {
+        after("default", SidebarComponent, ([props], res) => {
+            if (!res || !res.props) {
+                console.error("[ReadAll] ERROR: SidebarComponent returned empty.");
+                return res;
+            }
+
+            if (res.props.children.find((child) => child?.props?.id === "readall-button")) {
+                console.log("[ReadAll] Button already exists. Skipping re-injection.");
+                return res;
+            }
+
+            res.props.children = [
+                <div id="readall-button" style={{ padding: 10, marginBottom: 10 }}>
+                    <Button onClick={markAllMessagesRead} style={{ width: "100%" }}>
+                        ✅ Read All
+                    </Button>
+                </div>,
+                ...res.props.children,
+            ];
+
             return res;
-        }
+        });
 
-        if (res.props.children.find((child) => child?.props?.id === "readall-button")) {
-            console.log("[ReadAll] Button already exists. Skipping re-injection.");
-            return res;
-        }
-
-        res.props.children = [
-            <div id="readall-button" style={{ padding: 10, marginBottom: 10 }}>
-                <Button onClick={markAllMessagesRead} style={{ width: "100%" }}>
-                    ✅ Read All
-                </Button>
-            </div>,
-            ...res.props.children,
-        ];
-
-        return res;
-    });
-
-    console.log("[ReadAll] Button injected successfully.");
+        console.log("[ReadAll] Button injected successfully.");
+    } catch (error) {
+        console.error("[ReadAll] Injection failed:", error);
+    }
 }
 
 // Plugin lifecycle
