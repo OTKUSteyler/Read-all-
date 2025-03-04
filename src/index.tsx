@@ -3,7 +3,7 @@ import { Button } from "@vendetta/ui/components";
 import { useState, useEffect } from "react";
 
 // Import the icon image (ensure you have the image in /assets)
-import readAllIcon from 'https://github.com/mwittrien/BetterDiscordAddons/blob/master/Plugins%2FReadAllNotificationsButton%2F_res%2Fcover.png';  // Ensure correct path for your project
+import readAllIcon from 'https://github.com/mwittrien/BetterDiscordAddons/blob/master/Plugins%2FReadAllNotificationsButton%2F_res%2Fcover.png;  // Ensure correct path for your project
 
 // Main plugin logic
 const Plugin = () => {
