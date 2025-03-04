@@ -29,6 +29,14 @@ export const onLoad = () => {
             return;
         }
 
+        // Fetch the actual UI component responsible for rendering servers
+        const ServerList = findByProps("getGuilds", "getGuildCount");
+        if (!ServerList) {
+            console.error("[Read All] Server List component not found.");
+            showToast("Error: Server List component not found!", { type: "danger" });
+            return;
+        }
+
         // Ensure setting is defined
         if (storage.enableReadAll === undefined) {
             storage.enableReadAll = true;
@@ -37,6 +45,12 @@ export const onLoad = () => {
         // Patch the Guilds component to add the "Read All" button
         unpatch = after("Guilds", GuildsComponent, ([props], res) => {
             if (!res?.props?.children || !storage.enableReadAll) return res;
+
+            // Ensure the UI exists
+            if (!res.props.children || !Array.isArray(res.props.children)) {
+                console.error("[Read All] Server list UI is missing from props.");
+                return res;
+            }
 
             const readAllButton = (
                 <ReactNative.View style={{ padding: 10, alignItems: "center" }}>
