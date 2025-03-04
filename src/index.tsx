@@ -1,5 +1,5 @@
 import { after } from "@vendetta/patcher";
-import { findByProps, findByName } from "@vendetta/metro";
+import { findByProps, findByName, findAll } from "@vendetta/metro";
 import { React } from "@vendetta/metro/common";
 import { Button } from "@vendetta/ui/components";
 
@@ -18,30 +18,43 @@ function markAllMessagesRead() {
     console.log("[ReadAll] Marked all messages as read.");
 }
 
-// Function to find the Sidebar wrapper instead of Sidebar
-function findSidebarContainer(attempt = 1) {
-    console.log(`[ReadAll] Searching for Sidebar Container... (Attempt ${attempt})`);
+// Function to scan for any sidebar-related components
+function findSidebarComponent(attempt = 1) {
+    console.log(`[ReadAll] Searching for Sidebar Component... (Attempt ${attempt})`);
 
-    let SidebarWrapper = findByProps("guilds", "base") || findByProps("navWrapper");
+    const allModules = findAll(() => true);
+    let SidebarComponent = null;
 
-    if (!SidebarWrapper) {
-        if (attempt >= 10) {
-            console.error("[ReadAll] ERROR: Sidebar wrapper not found. Aborting.");
-            return null;
+    for (const mod of allModules) {
+        if (mod && typeof mod === "object") {
+            for (const key in mod) {
+                if (key.toLowerCase().includes("sidebar") || key.toLowerCase().includes("guilds")) {
+                    SidebarComponent = mod[key];
+                    break;
+                }
+            }
         }
-        return setTimeout(() => findSidebarContainer(attempt + 1), 500);
+        if (SidebarComponent) break;
     }
 
-    console.log("[ReadAll] Sidebar Wrapper found! Injecting button...");
-    injectButton(SidebarWrapper);
-    return SidebarWrapper;
+    if (!SidebarComponent) {
+        if (attempt >= 10) {
+            console.error("[ReadAll] ERROR: Sidebar component still not found. Aborting.");
+            return null;
+        }
+        return setTimeout(() => findSidebarComponent(attempt + 1), 500);
+    }
+
+    console.log("[ReadAll] Sidebar Component found! Injecting button...");
+    injectButton(SidebarComponent);
+    return SidebarComponent;
 }
 
-// Injects button into the UI dynamically
-function injectButton(SidebarWrapper) {
-    after("default", SidebarWrapper, ([props], res) => {
+// Injects button dynamically
+function injectButton(SidebarComponent) {
+    after("default", SidebarComponent, ([props], res) => {
         if (!res) {
-            console.error("[ReadAll] ERROR: SidebarWrapper returned empty.");
+            console.error("[ReadAll] ERROR: SidebarComponent returned empty.");
             return res;
         }
 
@@ -68,8 +81,8 @@ function injectButton(SidebarWrapper) {
 // Plugin lifecycle
 export default {
     onLoad: () => {
-        console.log("[ReadAll] Plugin loaded! Waiting for UI...");
-        setTimeout(() => findSidebarContainer(), 2000);
+        console.log("[ReadAll] Plugin loaded! Scanning UI components...");
+        setTimeout(() => findSidebarComponent(), 2000);
     },
     onUnload: () => {
         console.log("[ReadAll] Plugin unloaded!");
