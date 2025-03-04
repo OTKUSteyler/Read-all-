@@ -2,58 +2,62 @@ import { getModule, React, ReactDOM } from "@vendetta/metro";
 import { Button } from "@vendetta/ui/components";
 import { useState, useEffect } from "react";
 
-// Ensure the correct message UI context exists
+// Main plugin logic
 const Plugin = () => {
   const [isMounted, setIsMounted] = useState(false);
   const [messages, setMessages] = useState<any[]>([]);
   const [hasUnreadMessages, setHasUnreadMessages] = useState(false);
-
   const [isMessageListAvailable, setIsMessageListAvailable] = useState(false);
 
-  // Simulate the function to read all messages when the button is clicked
+  // Function to read all messages when the button is clicked
   const handleReadAllMessages = () => {
+    console.log("Button clicked: Attempting to mark all messages as read");
+
     if (!hasUnreadMessages) {
       console.log("No unread messages available.");
       return;
     }
 
-    console.log("Button clicked: Marking all messages as read");
-
-    // Mark messages as read (replace with actual logic)
+    // Simulate marking messages as read (replace this with actual logic)
     messages.forEach((message: any) => {
       console.log(`Marking message ${message.id} as read`);
     });
 
-    setHasUnreadMessages(false);
-    setMessages([]);
+    setHasUnreadMessages(false); // Reset state after marking as read
+    setMessages([]); // Clear messages
+    console.log("All messages marked as read.");
   };
 
+  // Check if message list or server list UI is available
+  const checkUIAvailability = () => {
+    const messageList = document.querySelector('[class*="messageList-"]'); // Check for message list
+    if (messageList) {
+      setIsMessageListAvailable(true);
+    } else {
+      setIsMessageListAvailable(false);
+    }
+  };
+
+  // Simulate loading unread messages and checking the UI
   useEffect(() => {
-    // Check if the message list is available (if you are in a server or channel)
-    const checkMessageListAvailability = () => {
-      // Make sure we're on a page with a message list (i.e., a channel is selected)
-      const messageList = document.querySelector('[class*="messageList-"]');
-      if (messageList) {
-        setIsMessageListAvailable(true);
+    checkUIAvailability(); // Check if message list is available
+
+    const fetchUnreadMessages = () => {
+      // Replace this with actual API to fetch unread messages
+      const unreadMessages = []; // Example: This should be replaced with real unread message fetching
+
+      if (unreadMessages.length > 0) {
+        setHasUnreadMessages(true);
+        setMessages(unreadMessages);
+        console.log(`Found ${unreadMessages.length} unread messages.`);
       } else {
-        setIsMessageListAvailable(false);
+        console.log("No unread messages found.");
       }
     };
 
-    // Run the check every time the component mounts or updates
-    checkMessageListAvailability();
-
-    // Simulate loading unread messages from Vendetta API (replace this with real API calls)
-    const unreadMessages = []; // Replace with real unread messages API call
-    if (unreadMessages.length > 0) {
-      setHasUnreadMessages(true);
-      setMessages(unreadMessages);
-      console.log(`Found ${unreadMessages.length} unread messages.`);
-    }
-
-    setIsMounted(true);
-
-  }, []);
+    fetchUnreadMessages(); // Fetch unread messages
+    setIsMounted(true); // Mark as mounted
+  }, []); // Empty dependency array ensures this runs once on mount
 
   if (!isMounted) return <div>Plugin not loaded properly</div>;
 
@@ -85,13 +89,15 @@ export default {
   start() {
     console.log("Plugin started");
 
+    // Inject the Plugin component into the Discord UI
     const ReactDOM = getModule(["render"]);
-    ReactDOM.render(<Plugin />, document.getElementById("app-mount"));
+    ReactDOM.render(<Plugin />, document.getElementById("app-mount")); // Ensure app-mount exists
   },
   stop() {
     console.log("Plugin stopped");
 
+    // Cleanup if necessary
     const ReactDOM = getModule(["render"]);
-    ReactDOM.unmountComponentAtNode(document.getElementById("app-mount"));
+    ReactDOM.unmountComponentAtNode(document.getElementById("app-mount")); // Adjust mount point if needed
   },
 };
