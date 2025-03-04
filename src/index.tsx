@@ -7,7 +7,7 @@ import { showToast } from "@vendetta/ui/toasts";
 // Get Discord modules
 const ReadStateStore = findByProps("ackMessage", "getUnreadCount", "isMentioned");
 const ChannelStore = findByProps("getChannel", "getDMFromUserId");
-const Navigation = findByName("ConnectedGuilds", false); // Server list navigation
+const Sidebar = findByName("Sidebar", false); // Correctly targeting the sidebar
 
 // Patch reference
 let patch: any = null;
@@ -27,14 +27,14 @@ function markAllMessagesRead() {
   showToast(`✅ Marked ${unreadCount} messages as read!`);
 }
 
-// Inject button into Discord's server list
+// Inject button into Revenge's sidebar
 function injectButton() {
-  if (!Navigation) {
-    console.error("[ReadAll] Could not find the server navigation UI.");
+  if (!Sidebar) {
+    console.error("[ReadAll] Could not find the sidebar UI.");
     return;
   }
 
-  patch = after("default", Navigation, ([props], res) => {
+  patch = after("default", Sidebar, ([props], res) => {
     if (!res) return res;
 
     res.props.children.unshift(
@@ -46,7 +46,7 @@ function injectButton() {
     return res;
   });
 
-  console.log("[ReadAll] Button injected into server navigation.");
+  console.log("[ReadAll] Button injected into the sidebar.");
 }
 
 export default {
