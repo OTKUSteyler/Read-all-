@@ -1,79 +1,62 @@
-import { getModule, React, ReactDOM } from "@vendetta/metro";
+import { getModule, React } from "@vendetta/metro";
 import { Button } from "@vendetta/ui/components";
 import { useState, useEffect } from "react";
 
-// Import the icon image (ensure you have the image in /assets)
-import readAllIcon from 'https://github.com/mwittrien/BetterDiscordAddons/blob/master/Plugins%2FReadAllNotificationsButton%2F_res%2Fcover.png;' // Ensure correct path for your project
+// Import the icon image (make sure the path is correct)
+import readAllIcon from "https://betterthanbtmc.s-ul.eu/gGEqdVTL";  // Adjust path to assets if necessary
 
-// Main plugin logic
 const Plugin = () => {
   const [isMounted, setIsMounted] = useState(false);
   const [messages, setMessages] = useState<any[]>([]);
   const [hasUnreadMessages, setHasUnreadMessages] = useState(false);
-  const [isServerListAvailable, setIsServerListAvailable] = useState(false);
 
-  // Function to read all messages when the button is clicked
+  // Handle click to mark all messages as read
   const handleReadAllMessages = () => {
     console.log("Button clicked: Attempting to mark all messages as read");
 
     if (!hasUnreadMessages) {
       console.log("No unread messages available.");
-      return;  // Early exit if no unread messages
+      return;
     }
 
-    // Simulate marking messages as read (replace with actual logic)
-    messages.forEach((message: any) => {
+    // Simulate marking messages as read
+    messages.forEach((message) => {
       console.log(`Marking message ${message.id} as read`);
     });
 
-    setHasUnreadMessages(false); // Reset after marking as read
-    setMessages([]); // Clear the messages array
+    setHasUnreadMessages(false);
+    setMessages([]);
     console.log("All messages marked as read.");
   };
 
-  // Check if the server list UI is available
-  const checkUIAvailability = () => {
-    const serverList = document.querySelector('[class*="serverList-"]'); // Check for server list
-
-    if (serverList) {
-      setIsServerListAvailable(true);
-    } else {
-      setIsServerListAvailable(false);
-    }
-  };
-
-  // Simulate loading unread messages and checking the UI
+  // Effect to simulate fetching unread messages
   useEffect(() => {
-    checkUIAvailability(); // Check if server list is available
-
     const fetchUnreadMessages = () => {
-      // Replace this with actual API to fetch unread messages
-      const unreadMessages = []; // Example, replace with real unread messages fetch
+      // Replace with actual API to fetch unread messages
+      const unreadMessages = [];  // Replace with your logic for fetching unread messages
 
       if (unreadMessages.length > 0) {
         setHasUnreadMessages(true);
         setMessages(unreadMessages);
         console.log(`Found ${unreadMessages.length} unread messages.`);
       } else {
+        setHasUnreadMessages(false);
         console.log("No unread messages found.");
-        setHasUnreadMessages(false); // Make sure the flag is reset
       }
     };
 
-    fetchUnreadMessages(); // Fetch unread messages
-    setIsMounted(true); // Mark as mounted
-  }, []); // Run once on mount
+    fetchUnreadMessages();
+    setIsMounted(true);
+  }, []);
 
-  if (!isMounted) return <div>Plugin not loaded properly</div>;
-
-  if (!isServerListAvailable) {
-    return <div>Server list UI is missing. Please open the server list view.</div>;
+  if (!isMounted) {
+    return <div>Plugin not loaded properly</div>;
   }
 
   return (
     <div
       style={{
-        position: "absolute",  // Position the button at the top
+        position: "absolute",
         top: "10px",
         left: "10px",
         zIndex: 9999,
@@ -87,17 +70,17 @@ const Plugin = () => {
           src={readAllIcon}
           alt="Read All"
           style={{
-            width: "24px",  // Size of the image icon
+            width: "24px",
             height: "24px",
-            marginRight: "8px", // Space between image and button text
+            marginRight: "8px",
           }}
         />
         Read All Messages
       </Button>
       <h2>{hasUnreadMessages ? "Unread Messages Available" : "No Unread Messages"}</h2>
       <ul style={{ listStyleType: "none", padding: 0 }}>
-        {messages.map((message: any) => (
-          <li key={message.id} style={{ margin: "10px 0", fontSize: "14px", color: "black" }}>
+        {messages.map((message) => (
+          <li key={message.id} style={{ margin: "10px 0", fontSize: "14px" }}>
             {message.text}
           </li>
         ))}
@@ -110,15 +93,21 @@ export default {
   start() {
     console.log("Plugin started");
 
-    // Inject the Plugin component into the Discord UI
+    // Ensure your render point is correct (adjust if needed)
     const ReactDOM = getModule(["render"]);
-    ReactDOM.render(<Plugin />, document.getElementById("app-mount")); // Ensure app-mount exists
+    const rootElement = document.getElementById("app-mount");
+    if (rootElement) {
+      ReactDOM.render(<Plugin />, rootElement);
+    }
   },
   stop() {
     console.log("Plugin stopped");
 
-    // Cleanup if necessary
+    // Ensure React component is unmounted properly
     const ReactDOM = getModule(["render"]);
-    ReactDOM.unmountComponentAtNode(document.getElementById("app-mount")); // Adjust mount point if needed
+    const rootElement = document.getElementById("app-mount");
+    if (rootElement) {
+      ReactDOM.unmountComponentAtNode(rootElement);
+    }
   },
 };
