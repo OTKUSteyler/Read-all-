@@ -18,30 +18,30 @@ function markAllMessagesRead() {
     console.log("[ReadAll] Marked all messages as read.");
 }
 
-// New function to find sidebar dynamically
-function findSidebarComponent(attempt = 1) {
-    console.log(`[ReadAll] Searching for Sidebar... (Attempt ${attempt})`);
+// Function to find the Sidebar wrapper instead of Sidebar
+function findSidebarContainer(attempt = 1) {
+    console.log(`[ReadAll] Searching for Sidebar Container... (Attempt ${attempt})`);
 
-    let Sidebar = findByProps("container", "sidebar") || findByName("Sidebar", false);
+    let SidebarWrapper = findByProps("guilds", "base") || findByProps("navWrapper");
 
-    if (!Sidebar) {
+    if (!SidebarWrapper) {
         if (attempt >= 10) {
-            console.error("[ReadAll] ERROR: Sidebar component not found. Aborting.");
+            console.error("[ReadAll] ERROR: Sidebar wrapper not found. Aborting.");
             return null;
         }
-        return setTimeout(() => findSidebarComponent(attempt + 1), 500);
+        return setTimeout(() => findSidebarContainer(attempt + 1), 500);
     }
 
-    console.log("[ReadAll] Sidebar found! Injecting button...");
-    injectButton(Sidebar);
-    return Sidebar;
+    console.log("[ReadAll] Sidebar Wrapper found! Injecting button...");
+    injectButton(SidebarWrapper);
+    return SidebarWrapper;
 }
 
 // Injects button into the UI dynamically
-function injectButton(Sidebar) {
-    after("default", Sidebar, ([props], res) => {
+function injectButton(SidebarWrapper) {
+    after("default", SidebarWrapper, ([props], res) => {
         if (!res) {
-            console.error("[ReadAll] ERROR: Sidebar returned empty.");
+            console.error("[ReadAll] ERROR: SidebarWrapper returned empty.");
             return res;
         }
 
@@ -69,7 +69,7 @@ function injectButton(Sidebar) {
 export default {
     onLoad: () => {
         console.log("[ReadAll] Plugin loaded! Waiting for UI...");
-        setTimeout(() => findSidebarComponent(), 2000);
+        setTimeout(() => findSidebarContainer(), 2000);
     },
     onUnload: () => {
         console.log("[ReadAll] Plugin unloaded!");
