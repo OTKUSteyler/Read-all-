@@ -4,12 +4,14 @@ import { findByProps, findByName } from "@vendetta/metro";
 import { Button } from "@vendetta/ui/components";
 import { showToast } from "@vendetta/ui/toasts";
 
-// Get Discord modules
+// Get necessary Discord components
 const ReadStateStore = findByProps("ackMessage", "getUnreadCount", "isMentioned");
 const ChannelStore = findByProps("getChannel", "getDMFromUserId");
-const Sidebar = findByName("Sidebar", false); // Correctly targeting the sidebar
 
-// Patch reference
+// Find the **correct server list (guilds) UI**
+const GuildsList = findByProps("Guilds", "UnreadBadge");
+
+// Store patch reference
 let patch: any = null;
 
 // Function to mark all messages as read
@@ -27,26 +29,29 @@ function markAllMessagesRead() {
   showToast(`✅ Marked ${unreadCount} messages as read!`);
 }
 
-// Inject button into Revenge's sidebar
+// Inject button into the **Server List (Guilds UI)**
 function injectButton() {
-  if (!Sidebar) {
-    console.error("[ReadAll] Could not find the sidebar UI.");
+  if (!GuildsList) {
+    console.error("[ReadAll] Could not find the server list UI.");
     return;
   }
 
-  patch = after("default", Sidebar, ([props], res) => {
+  patch = after("default", GuildsList, ([props], res) => {
     if (!res) return res;
 
+    // Create a new container for the button at the **top of the server list**
     res.props.children.unshift(
-      <Button onClick={markAllMessagesRead} style={{ margin: 10 }}>
-        ✅ Read All
-      </Button>
+      <div style={{ padding: 10 }}>
+        <Button onClick={markAllMessagesRead} style={{ width: "100%", marginBottom: 10 }}>
+          ✅ Read All
+        </Button>
+      </div>
     );
 
     return res;
   });
 
-  console.log("[ReadAll] Button injected into the sidebar.");
+  console.log("[ReadAll] Button injected into the server list.");
 }
 
 export default {
