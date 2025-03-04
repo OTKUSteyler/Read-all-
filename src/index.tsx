@@ -1,77 +1,90 @@
-import { React } from "@vendetta/metro";
 import { after } from "@vendetta/patcher";
-import { findByProps, findByName } from "@vendetta/metro";
+import { findByProps } from "@vendetta/metro";
+import { storage } from "@vendetta/plugin";
+import { React } from "@vendetta/metro/common";
 import { Button } from "@vendetta/ui/components";
-import { showToast } from "@vendetta/ui/toasts";
 
-// Get required Discord components
-const ReadStateStore = findByProps("ackMessage", "getUnreadCount", "isMentioned");
-const ChannelStore = findByProps("getChannel", "getDMFromUserId");
-const GuildsList = findByProps("Guilds", "container", "scroller"); // Likely new name for the server list
-
-// Debug: Confirm UI component exists
-console.log("[ReadAll] Checking UI components...");
-
-if (!GuildsList) {
-  console.error("[ReadAll] ERROR: GuildsList component not found!");
-}
-
-// Function to mark all messages as read
 function markAllMessagesRead() {
-  const channels = ChannelStore.getChannels();
-  let unreadCount = 0;
+    const ReadStateStore = findByProps("ack", "ackMessage");
 
-  Object.values(channels).forEach((channel: any) => {
-    if (ReadStateStore.getUnreadCount(channel.id) > 0) {
-      ReadStateStore.ackMessage(channel.id);
-      unreadCount++;
+    if (!ReadStateStore) {
+        console.error("[ReadAll] ERROR: ReadStateStore not found!");
+        return;
     }
-  });
 
-  showToast(`✅ Marked ${unreadCount} messages as read!`);
+    // Mark all messages as read
+    Object.keys(ReadStateStore.getUnreadCount()).forEach((channelId) => {
+        ReadStateStore.ack(channelId);
+    });
+
+    console.log("[ReadAll] Marked all messages as read.");
 }
 
-// Inject button into the **Sidebar**
-function injectButton() {
-  if (!GuildsList) {
-    console.error("[ReadAll] ERROR: GuildsList not found. Button injection failed.");
-    return;
-  }
+function findSidebarComponent() {
+    console.log("[ReadAll] Searching for sidebar components...");
 
-  console.log("[ReadAll] Found GuildsList, injecting button...");
-
-  // Patch the sidebar UI
-  after("default", GuildsList, ([props], res) => {
-    if (!res) {
-      console.error("[ReadAll] ERROR: GuildsList returned empty.");
-      return res;
-    }
-
-    console.log("[ReadAll] Injecting button into the sidebar...");
-
-    // Insert the button before the server list
-    res.props.children = [
-      <div style={{ padding: 10, marginBottom: 10 }}>
-        <Button onClick={markAllMessagesRead} style={{ width: "100%" }}>
-          ✅ Read All
-        </Button>
-      </div>,
-      ...res.props.children,
+    const possibleComponents = [
+        "GuildsList",
+        "Guilds",
+        "GuildSidebar",
+        "GuildContainer",
+        "Sidebar",
+        "ServerList",
+        "Servers",
     ];
 
-    return res;
-  });
+    for (const name of possibleComponents) {
+        const component = findByProps(name);
+        if (component) {
+            console.log(`[ReadAll] Found component: ${name}`);
+            return component;
+        }
+    }
 
-  console.log("[ReadAll] Button injected successfully.");
+    console.error("[ReadAll] ERROR: No sidebar component found!");
+    return null;
 }
 
+function injectButton() {
+    const Sidebar = findSidebarComponent();
+
+    if (!Sidebar) {
+        console.error("[ReadAll] ERROR: Sidebar component not found. Aborting injection.");
+        return;
+    }
+
+    console.log("[ReadAll] Injecting button into sidebar...");
+
+    after("default", Sidebar, ([props], res) => {
+        if (!res) {
+            console.error("[ReadAll] ERROR: Sidebar component returned empty.");
+            return res;
+        }
+
+        console.log("[ReadAll] Injecting button...");
+        
+        res.props.children = [
+            <div style={{ padding: 10, marginBottom: 10 }}>
+                <Button onClick={markAllMessagesRead} style={{ width: "100%" }}>
+                    ✅ Read All
+                </Button>
+            </div>,
+            ...res.props.children,
+        ];
+
+        return res;
+    });
+
+    console.log("[ReadAll] Button injection complete.");
+}
+
+// Plugin startup
 export default {
-  start() {
-    console.log("[ReadAll] Plugin starting...");
-    injectButton();
-    console.log("[ReadAll] Plugin started.");
-  },
-  stop() {
-    console.log("[ReadAll] Plugin stopping...");
-  },
+    onLoad: () => {
+        console.log("[ReadAll] Plugin loaded!");
+        injectButton();
+    },
+    onUnload: () => {
+        console.log("[ReadAll] Plugin unloaded!");
+    },
 };
