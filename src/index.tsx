@@ -7,13 +7,14 @@ import { showToast } from "@vendetta/ui/toasts";
 // Get required Discord components
 const ReadStateStore = findByProps("ackMessage", "getUnreadCount", "isMentioned");
 const ChannelStore = findByProps("getChannel", "getDMFromUserId");
+const GuildsList = findByProps("Guilds", "container", "scroller"); // Likely new name for the server list
 
-// Debug: Check what UI components exist
-console.log("[ReadAll] Looking for GuildsList...");
-const GuildsList = findByProps("Guilds", "UnreadBadge");
+// Debug: Confirm UI component exists
+console.log("[ReadAll] Checking UI components...");
 
-// Patch reference
-let patch: any = null;
+if (!GuildsList) {
+  console.error("[ReadAll] ERROR: GuildsList component not found!");
+}
 
 // Function to mark all messages as read
 function markAllMessagesRead() {
@@ -30,27 +31,28 @@ function markAllMessagesRead() {
   showToast(`✅ Marked ${unreadCount} messages as read!`);
 }
 
-// Inject button into the **Server List (Guilds UI)**
+// Inject button into the **Sidebar**
 function injectButton() {
   if (!GuildsList) {
-    console.error("[ReadAll] ERROR: GuildsList component not found!");
+    console.error("[ReadAll] ERROR: GuildsList not found. Button injection failed.");
     return;
   }
 
-  console.log("[ReadAll] GuildsList found! Injecting button...");
+  console.log("[ReadAll] Found GuildsList, injecting button...");
 
-  patch = after("default", GuildsList, ([props], res) => {
+  // Patch the sidebar UI
+  after("default", GuildsList, ([props], res) => {
     if (!res) {
       console.error("[ReadAll] ERROR: GuildsList returned empty.");
       return res;
     }
 
-    console.log("[ReadAll] Injecting button into the UI...");
+    console.log("[ReadAll] Injecting button into the sidebar...");
 
-    // Force UI update
+    // Insert the button before the server list
     res.props.children = [
-      <div style={{ padding: 10 }}>
-        <Button onClick={markAllMessagesRead} style={{ width: "100%", marginBottom: 10 }}>
+      <div style={{ padding: 10, marginBottom: 10 }}>
+        <Button onClick={markAllMessagesRead} style={{ width: "100%" }}>
           ✅ Read All
         </Button>
       </div>,
@@ -70,9 +72,6 @@ export default {
     console.log("[ReadAll] Plugin started.");
   },
   stop() {
-    if (patch) {
-      patch();
-      console.log("[ReadAll] Plugin stopped, patch removed.");
-    }
+    console.log("[ReadAll] Plugin stopping...");
   },
 };
