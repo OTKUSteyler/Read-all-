@@ -1,16 +1,18 @@
 import { React } from "@vendetta/metro";
 import { after } from "@vendetta/patcher";
-import { findByProps } from "@vendetta/metro";
+import { findByProps, findByName } from "@vendetta/metro";
 import { Button } from "@vendetta/ui/components";
 import { showToast } from "@vendetta/ui/toasts";
 
-// Get Discord's Read State and Channel Store
+// Get Discord modules
 const ReadStateStore = findByProps("ackMessage", "getUnreadCount", "isMentioned");
 const ChannelStore = findByProps("getChannel", "getDMFromUserId");
+const Navigation = findByName("ConnectedGuilds", false); // Server list navigation
 
 // Patch reference
 let patch: any = null;
 
+// Function to mark all messages as read
 function markAllMessagesRead() {
   const channels = ChannelStore.getChannels();
   let unreadCount = 0;
@@ -25,26 +27,26 @@ function markAllMessagesRead() {
   showToast(`✅ Marked ${unreadCount} messages as read!`);
 }
 
-// Inject button into Discord's sidebar instead of Guild List
+// Inject button into Discord's server list
 function injectButton() {
-  const Sidebar = findByProps("default", "sidebar");
-
-  if (!Sidebar) {
-    console.error("[ReadAll] Failed to find Sidebar UI.");
+  if (!Navigation) {
+    console.error("[ReadAll] Could not find the server navigation UI.");
     return;
   }
 
-  patch = after("default", Sidebar, ([props], res) => {
+  patch = after("default", Navigation, ([props], res) => {
     if (!res) return res;
 
     res.props.children.unshift(
-      <Button onClick={markAllMessagesRead} style={{ marginBottom: 10 }}>
+      <Button onClick={markAllMessagesRead} style={{ margin: 10 }}>
         ✅ Read All
       </Button>
     );
 
     return res;
   });
+
+  console.log("[ReadAll] Button injected into server navigation.");
 }
 
 export default {
