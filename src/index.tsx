@@ -1,8 +1,9 @@
 import { after } from "@vendetta/patcher";
 import { findByProps } from "@vendetta/metro";
 import { showToast } from "@vendetta/ui/toasts";
+import { React } from "@vendetta/metro/common";
 
-// Get Discord's Read State functions
+// Get Discord's read state functions
 const ReadStateStore = findByProps("ack", "ackMessage");
 
 // Function to mark all messages as read
@@ -21,34 +22,28 @@ function markAllMessagesRead() {
     showToast("✅ All messages marked as read!", { type: "success" });
 }
 
-// Function to modify the long-press menu
-function patchMessagesButton() {
-    const ChannelList = findByProps("ChannelList");
+// Patch the overlay buttons to add a "Mark All Read" button
+function patchOverlayButtons() {
+    const OverlayButtons = findByProps("OverlayButton");
 
-    if (!ChannelList) {
-        console.error("[ReadAll] ❌ ERROR: Messages button component not found!");
+    if (!OverlayButtons) {
+        console.error("[ReadAll] ❌ ERROR: Overlay button component not found!");
         return;
     }
 
-    after("default", ChannelList, ([props], res) => {
-        if (!res || !res.props || !res.props.onLongPress) {
-            console.error("[ReadAll] ❌ ERROR: Could not modify long-press action.");
-            return res;
-        }
+    after("default", OverlayButtons, ([props], res) => {
+        if (!res || !res.props || !Array.isArray(res.props.children)) return res;
 
-        // Modify the long-press action to show the option
-        const originalLongPress = res.props.onLongPress;
-        res.props.onLongPress = (event) => {
-            originalLongPress(event); // Keep existing behavior
+        res.props.children.push(
+            <OverlayButtons.OverlayButton
+                key="markAllRead"
+                icon="CheckCircle" // Uses Discord's built-in checkmark icon
+                onPress={markAllMessagesRead}
+                tooltip="Mark All as Read"
+            />
+        );
 
-            // Add our custom option
-            setTimeout(() => {
-                showToast("🔘 Hold down to mark all messages as read!", { type: "info" });
-                markAllMessagesRead();
-            }, 500); // Small delay for better UI
-        };
-
-        console.log("[ReadAll] ✅ Long-press action modified!");
+        console.log("[ReadAll] ✅ Overlay button added!");
         return res;
     });
 }
@@ -56,8 +51,8 @@ function patchMessagesButton() {
 // Plugin lifecycle
 export default {
     onLoad: () => {
-        console.log("[ReadAll] 🚀 Plugin loaded! Patching messages button...");
-        patchMessagesButton();
+        console.log("[ReadAll] 🚀 Plugin loaded! Adding overlay button...");
+        patchOverlayButtons();
     },
     onUnload: () => {
         console.log("[ReadAll] 🛑 Plugin unloaded!");
