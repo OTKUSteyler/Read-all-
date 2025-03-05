@@ -1,67 +1,55 @@
-import { after } from "@vendetta/patcher";
+import { React, ReactNative } from "@vendetta/metro/common";
 import { findByProps, findByName } from "@vendetta/metro";
-import { React } from "@vendetta/metro/common";
+import { after } from "@vendetta/patcher";
 import { showToast } from "@vendetta/ui/toasts";
 
-// Get Read State store
-const ReadStateStore = findByProps("ack", "ackMessage");
+// Find Discord's ReadState functions
+const ReadState = findByProps("ack", "getUnreadCount");
 
-// Find Sidebar component
-const Sidebar = findByProps("default", "Sidebars");
-const OverlayButton = findByProps("Button", "ButtonColors");
+// Find the sidebar dynamically
+const GuildsNav = findByName("GuildsNav", false);
 
-// Function to mark all as read
-function markAllMessagesRead() {
-    if (!ReadStateStore) {
-        console.error("[ReadAll] ❌ ERROR: ReadStateStore not found!");
-        showToast("❌ Error: Read state not found", { type: "error" });
-        return;
-    }
-
-    Object.keys(ReadStateStore.getUnreadCount()).forEach((channelId) => {
-        ReadStateStore.ack(channelId);
+// Function to mark all messages as read
+function markAllRead() {
+  try {
+    Object.values(ReadState.getGuilds()).forEach((guild: any) => {
+      ReadState.ack(guild.id);
     });
-
-    console.log("[ReadAll] ✅ Marked all messages as read.");
-    showToast("✅ All messages marked as read!", { type: "success" });
+    showToast("All messages marked as read!", { type: "success" });
+  } catch (error) {
+    console.error("[ReadAll] Error marking messages as read:", error);
+    showToast("Failed to mark messages as read.", { type: "error" });
+  }
 }
 
-// Function to add a button to the Sidebar
-function addSidebarButton(attempts = 10) {
-    if (!Sidebar || !OverlayButton) {
-        if (attempts <= 0) {
-            console.error("[ReadAll] ❌ ERROR: Sidebar/Overlay not found. Aborting.");
-            return;
-        }
-        console.log(`[ReadAll] 🔄 UI components not found, retrying... (${10 - attempts}/10)`);
-        setTimeout(() => addSidebarButton(attempts - 1), 500);
-        return;
-    }
-
-    after("default", Sidebar, ([props], res) => {
-        if (!res || !res.props || !Array.isArray(res.props.children)) return res;
-
-        res.props.children.push(
-            <OverlayButton
-                key="markAllRead"
-                text="📩 Read All"
-                onPress={markAllMessagesRead}
-                color={OverlayButton.ButtonColors.BRAND}
-            />
-        );
-
-        console.log("[ReadAll] ✅ Sidebar button added!");
-        return res;
-    });
-}
-
-// Plugin lifecycle
-export default {
-    onLoad: () => {
-        console.log("[ReadAll] 🚀 Plugin loaded! Adding sidebar button...");
-        addSidebarButton(); // Retry if it fails
-    },
-    onUnload: () => {
-        console.log("[ReadAll] 🛑 Plugin unloaded!");
-    },
+// "Read All" Button Component
+const ReadAllButton = () => {
+  return (
+    <ReactNative.TouchableOpacity
+      onPress={markAllRead}
+      style={{
+        backgroundColor: "#5865F2",
+        padding: 10,
+        borderRadius: 8,
+        margin: 8,
+        alignItems: "center",
+      }}
+    >
+      <ReactNative.Text style={{ color: "white", fontWeight: "bold" }}>
+        Read All
+      </ReactNative.Text>
+    </ReactNative.TouchableOpacity>
+  );
 };
+
+// Patch the Guilds sidebar to add the button
+if (GuildsNav) {
+  after("default", GuildsNav, (_, component) => {
+    if (!component || !component.props) return component;
+
+    component.props.children.push(<ReadAllButton />);
+    return component;
+  });
+} else {
+  console.error("[ReadAll] Sidebar component not found!");
+}
