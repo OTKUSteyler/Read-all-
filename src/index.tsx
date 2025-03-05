@@ -1,10 +1,14 @@
 import { after } from "@vendetta/patcher";
-import { findByProps, findByName } from "@vendetta/metro";
+import { findByProps } from "@vendetta/metro";
 import { React } from "@vendetta/metro/common";
 import { showToast } from "@vendetta/ui/toasts";
 
+// Get the Read State store
 const ReadStateStore = findByProps("ack", "ackMessage");
+
+// Get the Header Bar and Experimental Button components
 const HeaderBar = findByProps("HeaderBar");
+const ExperimentalButton = findByProps("Button", "ButtonColors");
 
 // Function to mark all messages as read
 function markAllMessagesRead() {
@@ -22,15 +26,15 @@ function markAllMessagesRead() {
     showToast("✅ All messages marked as read!", { type: "success" });
 }
 
-// Function to add the button to the DM header
-function addButtonToHeader(attempts = 10) {
-    if (!HeaderBar) {
+// Function to add the experimental button to the header
+function addExperimentalButton(attempts = 10) {
+    if (!HeaderBar || !ExperimentalButton) {
         if (attempts <= 0) {
-            console.error("[ReadAll] ❌ ERROR: HeaderBar component still not found. Aborting.");
+            console.error("[ReadAll] ❌ ERROR: Required components not found. Aborting.");
             return;
         }
-        console.log(`[ReadAll] 🔄 HeaderBar not found, retrying... (${10 - attempts}/10)`);
-        setTimeout(() => addButtonToHeader(attempts - 1), 500);
+        console.log(`[ReadAll] 🔄 UI components not found, retrying... (${10 - attempts}/10)`);
+        setTimeout(() => addExperimentalButton(attempts - 1), 500);
         return;
     }
 
@@ -38,15 +42,15 @@ function addButtonToHeader(attempts = 10) {
         if (!res || !res.props || !Array.isArray(res.props.children)) return res;
 
         res.props.children.push(
-            <HeaderBar.Button
+            <ExperimentalButton
                 key="markAllRead"
-                icon="CheckCircle" // Uses Discord's built-in checkmark icon
+                text="📩 Mark All Read"
                 onPress={markAllMessagesRead}
-                tooltip="Mark All as Read"
+                color={ExperimentalButton.ButtonColors.BRAND}
             />
         );
 
-        console.log("[ReadAll] ✅ Button added to DM header!");
+        console.log("[ReadAll] ✅ Experimental button added to header!");
         return res;
     });
 }
@@ -54,8 +58,8 @@ function addButtonToHeader(attempts = 10) {
 // Plugin lifecycle
 export default {
     onLoad: () => {
-        console.log("[ReadAll] 🚀 Plugin loaded! Searching for UI...");
-        addButtonToHeader(); // Now it retries if it fails
+        console.log("[ReadAll] 🚀 Plugin loaded! Adding experimental button...");
+        addExperimentalButton(); // Retry if it fails
     },
     onUnload: () => {
         console.log("[ReadAll] 🛑 Plugin unloaded!");
