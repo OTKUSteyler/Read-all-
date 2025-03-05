@@ -8,25 +8,25 @@ const log = (msg: string, type: "log" | "warn" | "error" = "log") => {
   console[type](`[ReadAll] ${msg}`);
 };
 
-// 1️⃣ Get Read State API
-const ReadState = findByProps("ack", "getUnreadCount");
+// 1️⃣ Find ReadState dynamically
+const ReadState = findByProps("ack", "isUnread") || findByProps("markAsRead");
 
 if (!ReadState) {
-  log("❌ ReadState module not found!", "error");
+  log("❌ ReadState module NOT found! Retrying...", "error");
 }
 
 // 2️⃣ Function to mark all messages as read
 function markAllRead() {
   try {
-    const unreadGuilds = ReadState?.getGuilds ? ReadState.getGuilds() : {};
-    if (!unreadGuilds) {
+    const unreadChannels = ReadState?.getUnreadChannels ? ReadState.getUnreadChannels() : {};
+    if (!unreadChannels) {
       log("⚠️ No unread messages found.", "warn");
       showToast("No unread messages.", { type: "info" });
       return;
     }
 
-    Object.values(unreadGuilds).forEach((guild: any) => {
-      ReadState.ack(guild.id);
+    Object.keys(unreadChannels).forEach((channelId) => {
+      ReadState.ack(channelId);
     });
 
     showToast("All messages marked as read!", { type: "success" });
@@ -59,7 +59,10 @@ const injectButton = () => {
   let attempts = 0;
 
   const interval = setInterval(() => {
-    const Sidebar = findByProps("NavigationSidebar") || findByProps("GuildsSidebar");
+    const Sidebar =
+      findByProps("MobileSidebar") ||
+      findByProps("GuildSidebar") ||
+      findByProps("SidebarContainer");
 
     if (Sidebar?.default) {
       log("✅ Sidebar found, injecting button!");
