@@ -8,7 +8,7 @@ const log = (msg: string, type: "log" | "warn" | "error" = "log") => {
   console[type](`[ReadAll] ${msg}`);
 };
 
-// 1️⃣ Find Discord's Read State API
+// 1️⃣ Get Read State API
 const ReadState = findByProps("ack", "getUnreadCount");
 
 if (!ReadState) {
@@ -18,14 +18,14 @@ if (!ReadState) {
 // 2️⃣ Function to mark all messages as read
 function markAllRead() {
   try {
-    const guilds = ReadState?.getGuilds ? ReadState.getGuilds() : {};
-    if (!guilds) {
-      log("⚠️ No guilds found to mark as read.", "warn");
+    const unreadGuilds = ReadState?.getGuilds ? ReadState.getGuilds() : {};
+    if (!unreadGuilds) {
+      log("⚠️ No unread messages found.", "warn");
       showToast("No unread messages.", { type: "info" });
       return;
     }
 
-    Object.values(guilds).forEach((guild: any) => {
+    Object.values(unreadGuilds).forEach((guild: any) => {
       ReadState.ack(guild.id);
     });
 
@@ -36,7 +36,7 @@ function markAllRead() {
   }
 }
 
-// 3️⃣ Button Component
+// 3️⃣ Read All Button Component
 const ReadAllButton = () => (
   <ReactNative.TouchableOpacity
     onPress={markAllRead}
@@ -54,13 +54,13 @@ const ReadAllButton = () => (
   </ReactNative.TouchableOpacity>
 );
 
-// 4️⃣ Find Sidebar Component Dynamically
+// 4️⃣ Inject Button into Sidebar
 const injectButton = () => {
   let attempts = 0;
 
   const interval = setInterval(() => {
-    const Sidebar = findByName("GuildsNav", false) || findByProps("GuildsNav");
-    
+    const Sidebar = findByProps("NavigationSidebar") || findByProps("GuildsSidebar");
+
     if (Sidebar?.default) {
       log("✅ Sidebar found, injecting button!");
 
@@ -86,4 +86,4 @@ const injectButton = () => {
   }, 1000);
 };
 
-injectButton(); // Start the sidebar detection process
+injectButton(); // Start detecting sidebar on mobile
