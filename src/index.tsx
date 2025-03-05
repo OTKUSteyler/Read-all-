@@ -1,10 +1,10 @@
 import { after } from "@vendetta/patcher";
 import { findByProps, findByName } from "@vendetta/metro";
-import { showToast } from "@vendetta/ui/toasts";
 import { React } from "@vendetta/metro/common";
+import { showToast } from "@vendetta/ui/toasts";
 
 const ReadStateStore = findByProps("ack", "ackMessage");
-const OverlayButtons = findByProps("OverlayButton");
+const HeaderBar = findByProps("HeaderBar");
 
 // Function to mark all messages as read
 function markAllMessagesRead() {
@@ -22,23 +22,23 @@ function markAllMessagesRead() {
     showToast("✅ All messages marked as read!", { type: "success" });
 }
 
-// Function to inject the button (retry logic added)
-function addOverlayButton(attempts = 10) {
-    if (!OverlayButtons) {
+// Function to add the button to the DM header
+function addButtonToHeader(attempts = 10) {
+    if (!HeaderBar) {
         if (attempts <= 0) {
-            console.error("[ReadAll] ❌ ERROR: Overlay button component still not found. Aborting.");
+            console.error("[ReadAll] ❌ ERROR: HeaderBar component still not found. Aborting.");
             return;
         }
-        console.log(`[ReadAll] 🔄 Overlay button not found, retrying... (${10 - attempts}/10)`);
-        setTimeout(() => addOverlayButton(attempts - 1), 500);
+        console.log(`[ReadAll] 🔄 HeaderBar not found, retrying... (${10 - attempts}/10)`);
+        setTimeout(() => addButtonToHeader(attempts - 1), 500);
         return;
     }
 
-    after("default", OverlayButtons, ([props], res) => {
+    after("default", HeaderBar, ([props], res) => {
         if (!res || !res.props || !Array.isArray(res.props.children)) return res;
 
         res.props.children.push(
-            <OverlayButtons.OverlayButton
+            <HeaderBar.Button
                 key="markAllRead"
                 icon="CheckCircle" // Uses Discord's built-in checkmark icon
                 onPress={markAllMessagesRead}
@@ -46,7 +46,7 @@ function addOverlayButton(attempts = 10) {
             />
         );
 
-        console.log("[ReadAll] ✅ Overlay button added!");
+        console.log("[ReadAll] ✅ Button added to DM header!");
         return res;
     });
 }
@@ -55,7 +55,7 @@ function addOverlayButton(attempts = 10) {
 export default {
     onLoad: () => {
         console.log("[ReadAll] 🚀 Plugin loaded! Searching for UI...");
-        addOverlayButton(); // Now it retries if it fails
+        addButtonToHeader(); // Now it retries if it fails
     },
     onUnload: () => {
         console.log("[ReadAll] 🛑 Plugin unloaded!");
