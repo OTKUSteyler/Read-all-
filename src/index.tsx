@@ -1,14 +1,17 @@
 import { after } from "@vendetta/patcher";
-import { findByProps, findByName } from "@vendetta/metro";
+import { findByProps, findByName, findByDisplayName } from "@vendetta/metro";
 import { React } from "@vendetta/metro/common";
 import { Button } from "@vendetta/ui/components";
+
+const MAX_RETRIES = 10;
+let retryCount = 0;
 
 // Function to mark all messages as read (DMs & Servers)
 function markAllMessagesRead() {
     const ReadStateStore = findByProps("ack", "ackMessage");
 
     if (!ReadStateStore) {
-        console.error("[ReadAll] ERROR: ReadStateStore not found!");
+        console.error("[ReadAll] ❌ ERROR: ReadStateStore not found!");
         return;
     }
 
@@ -19,47 +22,47 @@ function markAllMessagesRead() {
     console.log("[ReadAll] ✅ Marked all messages as read.");
 }
 
-// Function to find a safe UI location for the button
-function findSafeUIComponent(attempt = 1) {
-    try {
-        console.log(`[ReadAll] 🔎 Searching for a UI component... (Attempt ${attempt})`);
+// Function to locate a valid UI component
+function findValidUIComponent() {
+    console.log(`[ReadAll] 🔎 Searching for a UI component... (Attempt ${retryCount + 1}/${MAX_RETRIES})`);
 
-        // Look for multiple UI locations
+    try {
+        // Try different UI components for both DMs and server list
         const GuildsNav = findByProps("GuildsNav");
         const Sidebar = findByProps("NavWrapper", "Sidebar");
         const PrivateChannels = findByProps("PrivateChannels", "DMUserEntry");
 
-        // Try placing the button in multiple locations
         if (GuildsNav) {
-            console.log("[ReadAll] 🎯 Found GuildsNav component!");
+            console.log("[ReadAll] 🎯 Found GuildsNav!");
             injectButton(GuildsNav);
             return;
         }
 
         if (Sidebar) {
-            console.log("[ReadAll] 🎯 Found Sidebar component!");
+            console.log("[ReadAll] 🎯 Found Sidebar!");
             injectButton(Sidebar);
             return;
         }
 
         if (PrivateChannels) {
-            console.log("[ReadAll] 🎯 Found PrivateChannels (DM List) component!");
+            console.log("[ReadAll] 🎯 Found PrivateChannels (DM List)!");
             injectButton(PrivateChannels);
             return;
         }
 
-        if (attempt >= 5) {
+        // If no UI found, retry up to MAX_RETRIES
+        if (retryCount < MAX_RETRIES) {
+            retryCount++;
+            setTimeout(findValidUIComponent, 2000); // Wait 2s before retrying
+        } else {
             console.error("[ReadAll] ❌ ERROR: No valid UI component found. Aborting.");
-            return;
         }
-
-        setTimeout(() => findSafeUIComponent(attempt + 1), 1000);
     } catch (error) {
         console.error("[ReadAll] ⚠️ CRITICAL ERROR:", error);
     }
 }
 
-// Inject the button into the UI
+// Injects the button into the UI
 function injectButton(UIComponent) {
     try {
         after("default", UIComponent, ([props], res) => {
@@ -95,7 +98,7 @@ function injectButton(UIComponent) {
 export default {
     onLoad: () => {
         console.log("[ReadAll] 🚀 Plugin loaded! Searching for UI...");
-        setTimeout(() => findSafeUIComponent(), 2000);
+        setTimeout(findValidUIComponent, 3000); // Delay startup for better UI detection
     },
     onUnload: () => {
         console.log("[ReadAll] 🛑 Plugin unloaded!");
