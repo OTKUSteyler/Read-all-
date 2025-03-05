@@ -1,17 +1,15 @@
 import { after } from "@vendetta/patcher";
-import { findByProps, findByName, findByDisplayName } from "@vendetta/metro";
-import { React } from "@vendetta/metro/common";
-import { Button } from "@vendetta/ui/components";
+import { findByProps } from "@vendetta/metro";
+import { showToast } from "@vendetta/ui/toasts";
 
-const MAX_RETRIES = 10;
-let retryCount = 0;
+// Get Discord's Read State functions
+const ReadStateStore = findByProps("ack", "ackMessage");
 
-// Function to mark all messages as read (DMs & Servers)
+// Function to mark all messages as read
 function markAllMessagesRead() {
-    const ReadStateStore = findByProps("ack", "ackMessage");
-
     if (!ReadStateStore) {
         console.error("[ReadAll] ❌ ERROR: ReadStateStore not found!");
+        showToast("❌ Error: Read state not found", { type: "error" });
         return;
     }
 
@@ -20,85 +18,46 @@ function markAllMessagesRead() {
     });
 
     console.log("[ReadAll] ✅ Marked all messages as read.");
+    showToast("✅ All messages marked as read!", { type: "success" });
 }
 
-// Function to locate a valid UI component
-function findValidUIComponent() {
-    console.log(`[ReadAll] 🔎 Searching for a UI component... (Attempt ${retryCount + 1}/${MAX_RETRIES})`);
+// Function to modify the long-press menu
+function patchMessagesButton() {
+    const ChannelList = findByProps("ChannelList");
 
-    try {
-        // Try different UI components for both DMs and server list
-        const GuildsNav = findByProps("GuildsNav");
-        const Sidebar = findByProps("NavWrapper", "Sidebar");
-        const PrivateChannels = findByProps("PrivateChannels", "DMUserEntry");
-
-        if (GuildsNav) {
-            console.log("[ReadAll] 🎯 Found GuildsNav!");
-            injectButton(GuildsNav);
-            return;
-        }
-
-        if (Sidebar) {
-            console.log("[ReadAll] 🎯 Found Sidebar!");
-            injectButton(Sidebar);
-            return;
-        }
-
-        if (PrivateChannels) {
-            console.log("[ReadAll] 🎯 Found PrivateChannels (DM List)!");
-            injectButton(PrivateChannels);
-            return;
-        }
-
-        // If no UI found, retry up to MAX_RETRIES
-        if (retryCount < MAX_RETRIES) {
-            retryCount++;
-            setTimeout(findValidUIComponent, 2000); // Wait 2s before retrying
-        } else {
-            console.error("[ReadAll] ❌ ERROR: No valid UI component found. Aborting.");
-        }
-    } catch (error) {
-        console.error("[ReadAll] ⚠️ CRITICAL ERROR:", error);
+    if (!ChannelList) {
+        console.error("[ReadAll] ❌ ERROR: Messages button component not found!");
+        return;
     }
-}
 
-// Injects the button into the UI
-function injectButton(UIComponent) {
-    try {
-        after("default", UIComponent, ([props], res) => {
-            if (!res || !res.props) {
-                console.error("[ReadAll] ❌ ERROR: UIComponent returned empty.");
-                return res;
-            }
-
-            if (res.props.children.find((child) => child?.props?.id === "readall-button")) {
-                console.log("[ReadAll] ⏩ Button already exists. Skipping re-injection.");
-                return res;
-            }
-
-            res.props.children = [
-                <div id="readall-button" style={{ padding: 10, marginBottom: 10 }}>
-                    <Button onClick={markAllMessagesRead} style={{ width: "100%" }}>
-                        ✅ Mark All as Read
-                    </Button>
-                </div>,
-                ...res.props.children,
-            ];
-
+    after("default", ChannelList, ([props], res) => {
+        if (!res || !res.props || !res.props.onLongPress) {
+            console.error("[ReadAll] ❌ ERROR: Could not modify long-press action.");
             return res;
-        });
+        }
 
-        console.log("[ReadAll] ✅ Button injected successfully.");
-    } catch (error) {
-        console.error("[ReadAll] ❌ Injection failed:", error);
-    }
+        // Modify the long-press action to show the option
+        const originalLongPress = res.props.onLongPress;
+        res.props.onLongPress = (event) => {
+            originalLongPress(event); // Keep existing behavior
+
+            // Add our custom option
+            setTimeout(() => {
+                showToast("🔘 Hold down to mark all messages as read!", { type: "info" });
+                markAllMessagesRead();
+            }, 500); // Small delay for better UI
+        };
+
+        console.log("[ReadAll] ✅ Long-press action modified!");
+        return res;
+    });
 }
 
 // Plugin lifecycle
 export default {
     onLoad: () => {
-        console.log("[ReadAll] 🚀 Plugin loaded! Searching for UI...");
-        setTimeout(findValidUIComponent, 3000); // Delay startup for better UI detection
+        console.log("[ReadAll] 🚀 Plugin loaded! Patching messages button...");
+        patchMessagesButton();
     },
     onUnload: () => {
         console.log("[ReadAll] 🛑 Plugin unloaded!");
