@@ -1,10 +1,10 @@
 import { after } from "@vendetta/patcher";
-import { findByProps } from "@vendetta/metro";
+import { findByProps, findByName } from "@vendetta/metro";
 import { showToast } from "@vendetta/ui/toasts";
 import { React } from "@vendetta/metro/common";
 
-// Get Discord's read state functions
 const ReadStateStore = findByProps("ack", "ackMessage");
+const OverlayButtons = findByProps("OverlayButton");
 
 // Function to mark all messages as read
 function markAllMessagesRead() {
@@ -22,12 +22,15 @@ function markAllMessagesRead() {
     showToast("✅ All messages marked as read!", { type: "success" });
 }
 
-// Patch the overlay buttons to add a "Mark All Read" button
-function patchOverlayButtons() {
-    const OverlayButtons = findByProps("OverlayButton");
-
+// Function to inject the button (retry logic added)
+function addOverlayButton(attempts = 10) {
     if (!OverlayButtons) {
-        console.error("[ReadAll] ❌ ERROR: Overlay button component not found!");
+        if (attempts <= 0) {
+            console.error("[ReadAll] ❌ ERROR: Overlay button component still not found. Aborting.");
+            return;
+        }
+        console.log(`[ReadAll] 🔄 Overlay button not found, retrying... (${10 - attempts}/10)`);
+        setTimeout(() => addOverlayButton(attempts - 1), 500);
         return;
     }
 
@@ -51,8 +54,8 @@ function patchOverlayButtons() {
 // Plugin lifecycle
 export default {
     onLoad: () => {
-        console.log("[ReadAll] 🚀 Plugin loaded! Adding overlay button...");
-        patchOverlayButtons();
+        console.log("[ReadAll] 🚀 Plugin loaded! Searching for UI...");
+        addOverlayButton(); // Now it retries if it fails
     },
     onUnload: () => {
         console.log("[ReadAll] 🛑 Plugin unloaded!");
