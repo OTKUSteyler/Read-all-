@@ -1,92 +1,150 @@
-import { React, ReactNative } from "@vendetta/metro/common";
-import { findByProps, findByName } from "@vendetta/metro";
-import { after } from "@vendetta/patcher";
+import { React } from "@vendetta/common";
+import { before } from "@vendetta/patcher";
+import { findByProps } from "@vendetta/metro";
+import { getAssetIDByName } from "@vendetta/ui/assets";
 import { showToast } from "@vendetta/ui/toasts";
+import { findInReactTree } from "@vendetta/utils";
+import { storage } from "@vendetta/plugin";
 
-// 🛠 Debugging Helper
-const log = (msg: string, type: "log" | "warn" | "error" = "log") => {
-  console[type](`[ReadAll] ${msg}`);
-};
+// Initialize default settings
+storage.unreadGuildsCount ??= 0;
 
-// 1️⃣ Find ReadState dynamically
-const ReadState = findByProps("ack", "isUnread") || findByProps("markAsRead");
+// Find necessary Discord modules
+const GuildStore = findByProps("getGuilds", "getGuild");
+const ChannelStore = findByProps("getChannel", "getMutablePrivateChannels");
+const ReadStateStore = findByProps("getUnreadCount", "hasUnread");
+const ReadStateActions = findByProps("markGuildAsRead", "markChannelAsRead");
+const NavigationNative = findByProps("NavigationContainer");
+const TabBar = findByProps("TabBar")?.TabBar;
 
-if (!ReadState) {
-  log("❌ ReadState module NOT found! Retrying...", "error");
-}
+// Track unread channels count for stats
+let unpatchTabs: () => void;
+let canShowToast = true;
 
-// 2️⃣ Function to mark all messages as read
-function markAllRead() {
-  try {
-    const unreadChannels = ReadState?.getUnreadChannels ? ReadState.getUnreadChannels() : {};
-    if (!unreadChannels) {
-      log("⚠️ No unread messages found.", "warn");
-      showToast("No unread messages.", { type: "info" });
-      return;
-    }
-
-    Object.keys(unreadChannels).forEach((channelId) => {
-      ReadState.ack(channelId);
-    });
-
-    showToast("All messages marked as read!", { type: "success" });
-  } catch (error) {
-    log(`❌ Error marking messages as read: ${error}`, "error");
-    showToast("Failed to mark messages as read.", { type: "error" });
-  }
-}
-
-// 3️⃣ Read All Button Component
-const ReadAllButton = () => (
-  <ReactNative.TouchableOpacity
-    onPress={markAllRead}
-    style={{
-      backgroundColor: "#5865F2",
-      padding: 10,
-      borderRadius: 8,
-      margin: 8,
-      alignItems: "center",
-    }}
-  >
-    <ReactNative.Text style={{ color: "white", fontWeight: "bold" }}>
-      Read All
-    </ReactNative.Text>
-  </ReactNative.TouchableOpacity>
-);
-
-// 4️⃣ Inject Button into Sidebar
-const injectButton = () => {
-  let attempts = 0;
-
-  const interval = setInterval(() => {
-    const Sidebar =
-      findByProps("MobileSidebar") ||
-      findByProps("GuildSidebar") ||
-      findByProps("SidebarContainer");
-
-    if (Sidebar?.default) {
-      log("✅ Sidebar found, injecting button!");
-
-      after("default", Sidebar, (_, component) => {
-        if (!component || !component.props) return component;
+// Handle marking all guilds as read
+function markAllAsRead() {
+    try {
+        // Get all unread guilds and channels
+        const unreadGuilds = [];
+        const guilds = Object.values(GuildStore.getGuilds());
         
-        // Ensure the button isn't added twice
-        if (!component.props.children.find((child: any) => child?.type === ReadAllButton)) {
-          component.props.children.push(<ReadAllButton />);
+        for (const guild of guilds) {
+            if (ReadStateStore.hasUnread(guild.id)) {
+                unreadGuilds.push(guild.id);
+                ReadStateActions.markGuildAsRead(guild.id);
+            }
         }
-
-        return component;
-      });
-
-      clearInterval(interval);
-    } else {
-      log(`Sidebar not found, retrying... (${attempts}/10)`);
-      if (++attempts >= 10) {
-        log("❌ ERROR: Sidebar not found. Aborting.", "error");
-        clearInterval(interval);
-      }
+        
+        // Mark all DMs as read
+        const privateChannels = Object.values(ChannelStore.getMutablePrivateChannels());
+        for (const channel of privateChannels) {
+            if (ReadStateStore.hasUnread(channel.id)) {
+                ReadStateActions.markChannelAsRead(channel.id);
+            }
+        }
+        
+        // Update stats
+        storage.unreadGuildsCount = (storage.unreadGuildsCount || 0) + unreadGuilds.length;
+        
+        // Show success toast
+        if (canShowToast) {
+            showToast(`Marked ${unreadGuilds.length} guilds as read`, getToastOptions("success"));
+            // Prevent toast spam by limiting frequency
+            canShowToast = false;
+            setTimeout(() => canShowToast = true, 2000);
+        }
+    } catch (e) {
+        console.error("Error in markAllAsRead:", e);
+        showToast("Failed to mark all as read", getToastOptions("error"));
     }
-  }, 1000);
-};
+}
 
-injectButton(); // Start detecting sidebar on mobile
+// Helper function for toast options compatibility
+function getToastOptions(type: string) {
+    try {
+        // Check if old API or new API
+        if (typeof showToast === "function") {
+            if (showToast.length >= 2) {
+                return { type };
+            }
+            return { content: type };
+        }
+        return {}; // Fallback empty object
+    } catch (e) {
+        return {}; // Return empty object on error
+    }
+}
+
+// Plugin initialization
+export default {
+    onLoad: () => {
+        // Patch the tab bar to add our button
+        if (TabBar) {
+            unpatchTabs = before("render", TabBar.prototype, function (args) {
+                const self = this;
+                
+                try {
+                    // Only patch the main tab bar
+                    if (!self.props?.items?.length) return;
+                    
+                    // Find the main tab bar by checking for specific tab types
+                    const isMainTabBar = self.props.items.some(
+                        item => item.id === "home" || item.id === "friends"
+                    );
+                    
+                    if (!isMainTabBar) return;
+                    
+                    // Create our custom "Read All" tab
+                    const readAllTab = {
+                        id: "read-all",
+                        title: "Read All",
+                        icon: getAssetIDByName("ic_done_all_24px"),
+                        onPress: markAllAsRead
+                    };
+                    
+                    // Add our tab to the items
+                    self.props.items = [...self.props.items, readAllTab];
+                } catch (e) {
+                    console.error("Error in TabBar patch:", e);
+                }
+            });
+        } else {
+            console.error("TabBar not found. Plugin may not work correctly.");
+            showToast("Read-all plugin: TabBar not found", getToastOptions("error"));
+        }
+        
+        showToast("Read-all plugin loaded", getToastOptions("success"));
+    },
+    
+    onUnload: () => {
+        // Clean up patches
+        if (unpatchTabs) unpatchTabs();
+        showToast("Read-all plugin unloaded", getToastOptions("info"));
+    },
+    
+    settings: () => {
+        return (
+            <div style={{ padding: 16 }}>
+                <h2 style={{ marginBottom: 16 }}>Read-all Statistics</h2>
+                <p>Total unread guilds marked as read: {storage.unreadGuildsCount || 0}</p>
+                <div style={{ marginTop: 16 }}>
+                    <button
+                        style={{
+                            backgroundColor: "#5865F2",
+                            color: "white",
+                            padding: "8px 16px",
+                            borderRadius: 3,
+                            border: "none"
+                        }}
+                        onClick={() => {
+                            storage.unreadGuildsCount = 0;
+                            showToast("Statistics reset", getToastOptions("success"));
+                        }}
+                    >
+                        Reset Statistics
+                    </button>
+                </div>
+            </div>
+        );
+    }
+};
