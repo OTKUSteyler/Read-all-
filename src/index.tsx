@@ -1,10 +1,10 @@
 import { React } from "@vendetta/common";
 import { before } from "@vendetta/patcher";
-import { findByProps } from "@vendetta/metro";
+import { findByProps, findByName } from "@vendetta/metro";
 import { getAssetIDByName } from "@vendetta/ui/assets";
 import { showToast } from "@vendetta/ui/toasts";
-import { findInReactTree } from "@vendetta/utils";
 import { storage } from "@vendetta/plugin";
+import Settings from "./Settings";
 
 // Initialize default settings
 storage.unreadGuildsCount ??= 0;
@@ -14,11 +14,13 @@ const GuildStore = findByProps("getGuilds", "getGuild");
 const ChannelStore = findByProps("getChannel", "getMutablePrivateChannels");
 const ReadStateStore = findByProps("getUnreadCount", "hasUnread");
 const ReadStateActions = findByProps("markGuildAsRead", "markChannelAsRead");
-const NavigationNative = findByProps("NavigationContainer");
-const TabBar = findByProps("TabBar")?.TabBar;
+const TabBarModule = findByProps("TabBar");
+const TabBar = TabBarModule?.TabBar;
+const NavigationStack = findByName("NavigationStack");
 
-// Track unread channels count for stats
-let unpatchTabs: () => void;
+// Track patches for cleanup
+let unpatchTabs;
+let unpatchNavigation;
 let canShowToast = true;
 
 // Handle marking all guilds as read
@@ -60,7 +62,7 @@ function markAllAsRead() {
 }
 
 // Helper function for toast options compatibility
-function getToastOptions(type: string) {
+function getToastOptions(type) {
     try {
         // Check if old API or new API
         if (typeof showToast === "function") {
@@ -75,76 +77,102 @@ function getToastOptions(type: string) {
     }
 }
 
-// Plugin initialization
+// Plugin API exports
 export default {
     onLoad: () => {
-        // Patch the tab bar to add our button
-        if (TabBar) {
-            unpatchTabs = before("render", TabBar.prototype, function (args) {
-                const self = this;
+        try {
+            // Try to patch TabBar first (main approach)
+            if (TabBar) {
+                unpatchTabs = before("render", TabBar.prototype, function (args) {
+                    const self = this;
+                    
+                    try {
+                        // Only patch tabs with items
+                        if (!self.props?.items?.length) return;
+                        
+                        // Find the main tab bar by checking for specific tab types
+                        const isMainTabBar = self.props.items.some(
+                            item => item.id === "home" || item.id === "friends" || item.id === "nitro"
+                        );
+                        
+                        if (!isMainTabBar) return;
+                        
+                        // Create our custom "Read All" tab if it doesn't exist yet
+                        const existingTabIndex = self.props.items.findIndex(i => i.id === "read-all");
+                        if (existingTabIndex === -1) {
+                            // Create our custom "Read All" tab
+                            const readAllTab = {
+                                id: "read-all",
+                                title: "Read All",
+                                icon: getAssetIDByName("ic_check_24px"), // Using a definitely available icon
+                                onPress: markAllAsRead
+                            };
+                            
+                            // Add our tab to the items
+                            self.props.items = [...self.props.items, readAllTab];
+                        }
+                    } catch (e) {
+                        console.error("Error in TabBar patch:", e);
+                    }
+                });
                 
-                try {
-                    // Only patch the main tab bar
-                    if (!self.props?.items?.length) return;
+                console.log("Successfully patched TabBar");
+            } 
+            
+            // Alternative approach using NavigationStack
+            if (NavigationStack && !unpatchTabs) {
+                unpatchNavigation = before("render", NavigationStack.prototype, function(args) {
+                    const self = this;
                     
-                    // Find the main tab bar by checking for specific tab types
-                    const isMainTabBar = self.props.items.some(
-                        item => item.id === "home" || item.id === "friends"
-                    );
-                    
-                    if (!isMainTabBar) return;
-                    
-                    // Create our custom "Read All" tab
-                    const readAllTab = {
-                        id: "read-all",
-                        title: "Read All",
-                        icon: getAssetIDByName("ic_done_all_24px"),
-                        onPress: markAllAsRead
-                    };
-                    
-                    // Add our tab to the items
-                    self.props.items = [...self.props.items, readAllTab];
-                } catch (e) {
-                    console.error("Error in TabBar patch:", e);
-                }
-            });
-        } else {
-            console.error("TabBar not found. Plugin may not work correctly.");
-            showToast("Read-all plugin: TabBar not found", getToastOptions("error"));
+                    try {
+                        // Check if this is the bottom navigation
+                        if (self.props?.routes && Array.isArray(self.props.routes)) {
+                            // Check if we have navigation routes
+                            const isBottomNav = self.props.routes.some(
+                                route => route.name === "Home" || route.name === "Friends"
+                            );
+                            
+                            if (isBottomNav) {
+                                // Add our route if not exists
+                                const existingRouteIndex = self.props.routes.findIndex(r => r.name === "ReadAll");
+                                if (existingRouteIndex === -1) {
+                                    // Add our route
+                                    self.props.routes.push({
+                                        name: "ReadAll",
+                                        params: {},
+                                        render: () => null,
+                                        icon: getAssetIDByName("ic_check_24px"),
+                                        onPress: markAllAsRead
+                                    });
+                                }
+                            }
+                        }
+                    } catch (e) {
+                        console.error("Error in NavigationStack patch:", e);
+                    }
+                });
+                
+                console.log("Using fallback NavigationStack patch");
+            }
+            
+            if (!unpatchTabs && !unpatchNavigation) {
+                console.error("Could not patch any navigation components");
+                showToast("Read-all plugin may not work correctly", getToastOptions("warning"));
+            } else {
+                showToast("Read-all plugin loaded", getToastOptions("success"));
+            }
+        } catch (e) {
+            console.error("Error during plugin load:", e);
+            showToast("Read-all plugin failed to load correctly", getToastOptions("error"));
         }
-        
-        showToast("Read-all plugin loaded", getToastOptions("success"));
     },
     
     onUnload: () => {
         // Clean up patches
         if (unpatchTabs) unpatchTabs();
+        if (unpatchNavigation) unpatchNavigation();
         showToast("Read-all plugin unloaded", getToastOptions("info"));
     },
     
-    settings: () => {
-        return (
-            <div style={{ padding: 16 }}>
-                <h2 style={{ marginBottom: 16 }}>Read-all Statistics</h2>
-                <p>Total unread guilds marked as read: {storage.unreadGuildsCount || 0}</p>
-                <div style={{ marginTop: 16 }}>
-                    <button
-                        style={{
-                            backgroundColor: "#5865F2",
-                            color: "white",
-                            padding: "8px 16px",
-                            borderRadius: 3,
-                            border: "none"
-                        }}
-                        onClick={() => {
-                            storage.unreadGuildsCount = 0;
-                            showToast("Statistics reset", getToastOptions("success"));
-                        }}
-                    >
-                        Reset Statistics
-                    </button>
-                </div>
-            </div>
-        );
-    }
+    settings: Settings
 };
