@@ -15,14 +15,14 @@ const ChannelStore = findByProps("getChannel", "getMutablePrivateChannels");
 const ReadStateStore = findByProps("getUnreadCount", "hasUnread");
 const ReadStateActions = findByProps("markGuildAsRead", "markChannelAsRead");
 
-// Find the top navigation components
-const HeaderBar = findByName("HeaderBar");
-const AppHeaderIcon = findByName("AppHeaderIcon") || findByProps("AppHeaderIcon")?.AppHeaderIcon;
-const HeaderBarComponents = findByProps("HeaderBarButton");
-const TopNavigation = findByName("TopNavigation") || findByProps("TopNavigation")?.TopNavigation;
+// Find server list components
+const GuildListComponent = findByProps("GuildList")?.GuildList || findByName("GuildList");
+const GuildItem = findByProps("GuildIcon")?.GuildIcon || findByName("GuildIcon");
+const HomeButton = findByProps("HomeButton")?.HomeButton || findByName("HomeButton");
+const GuildListDivider = findByProps("GuildListDivider")?.GuildListDivider || findByName("GuildListDivider");
 
 // Track patches for cleanup
-let unpatchHeader = null;
+let unpatchGuildList = null;
 let canShowToast = true;
 
 // Handle marking all guilds as read
@@ -79,106 +79,122 @@ function getToastOptions(type) {
     }
 }
 
-// Create our button component
-const ReadAllButton = () => {
-    const HeaderBarButton = HeaderBarComponents?.HeaderBarButton;
+// Create our custom server-like button component
+const ReadAllButton = (props) => {
+    const styles = {
+        container: {
+            width: 48, 
+            height: 48,
+            borderRadius: 24,
+            backgroundColor: "#5865F2",  // Discord blurple color
+            marginBottom: 8,
+            marginTop: 8,
+            marginLeft: "auto",
+            marginRight: "auto",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            position: "relative"
+        },
+        icon: {
+            width: 24,
+            height: 24,
+            color: "#FFFFFF"
+        }
+    };
+
+    // Get various icons we can use
+    const checkIcon = getAssetIDByName("ic_done_all_24px") || 
+                     getAssetIDByName("ic_check_24px") || 
+                     getAssetIDByName("debug") ||
+                     getAssetIDByName("ic_message_check");
     
-    if (!HeaderBarButton) {
-        console.error("HeaderBarButton not found");
-        return null;
-    }
-    
-    return React.createElement(HeaderBarButton, {
-        onPress: markAllAsRead,
-        icon: getAssetIDByName("ic_done_all_24px") || getAssetIDByName("ic_check_24px"),
-        activeOpacity: 0.3,
-        style: { marginRight: 8 },
-        accessibilityLabel: "Mark all as read"
-    });
+    // For Pressable component
+    const Pressable = findByName("Pressable") || 
+                     findByProps("Pressable")?.Pressable ||
+                     (props => React.createElement("button", props));
+
+    // For Icon component
+    const Icon = findByName("Icon") || 
+                findByProps("Icon")?.Icon;
+
+    return React.createElement(
+        Pressable, 
+        {
+            style: styles.container,
+            onPress: markAllAsRead,
+            accessibilityLabel: "Mark all as read"
+        },
+        Icon 
+            ? React.createElement(Icon, {
+                source: checkIcon,
+                style: styles.icon
+            })
+            : null
+    );
 };
 
 // Plugin API exports
 export default {
     onLoad: () => {
         try {
-            // Approach 1: Using HeaderBar
-            if (HeaderBar) {
-                unpatchHeader = after("default", HeaderBar, (args, res) => {
+            // Patch the Guild List to add our button
+            if (GuildListComponent) {
+                unpatchGuildList = after("default", GuildListComponent, (args, res) => {
                     try {
-                        // Find the header buttons container
-                        const headerContainer = findInReactTree(res, r => 
-                            r?.props?.children?.find?.(c => 
-                                c?.props?.accessibilityLabel === "New Group DM" || 
-                                c?.props?.accessibilityLabel === "Direct Messages"
-                            )
-                        );
-                        
-                        if (headerContainer?.props?.children) {
-                            // Add our button after Messages button
-                            const messagesButtonIndex = headerContainer.props.children.findIndex(c => 
-                                c?.props?.accessibilityLabel === "Direct Messages"
-                            );
-                            
-                            if (messagesButtonIndex !== -1) {
-                                // Insert our button after the Messages button
-                                headerContainer.props.children.splice(
-                                    messagesButtonIndex + 1, 
-                                    0, 
-                                    React.createElement(ReadAllButton)
-                                );
-                            } else {
-                                // Fallback: Add to the end
-                                headerContainer.props.children.push(React.createElement(ReadAllButton));
-                            }
-                        }
-                    } catch (e) {
-                        console.error("Error patching HeaderBar:", e);
-                    }
-                    
-                    return res;
-                });
-                
-                console.log("Successfully patched HeaderBar");
-                showToast("Read-all plugin loaded", getToastOptions("success"));
-            } else if (TopNavigation) {
-                // Alternative approach using TopNavigation
-                unpatchHeader = after("default", TopNavigation, (args, res) => {
-                    try {
-                        // Find the actions container
-                        const actionsContainer = findInReactTree(res, r => 
+                        // Find the guilds container
+                        const guildsContainer = findInReactTree(res, r => 
                             Array.isArray(r?.props?.children) && 
-                            r.props.children.some(c => c?.props?.accessibilityLabel === "Direct Messages")
+                            r.props.children.some(c => c?.type?.name === "HomeButton" || c?.type?.displayName === "HomeButton")
                         );
                         
-                        if (actionsContainer?.props?.children) {
-                            // Add our button after Messages
-                            const messagesButtonIndex = actionsContainer.props.children.findIndex(c => 
-                                c?.props?.accessibilityLabel === "Direct Messages"
+                        if (guildsContainer?.props?.children) {
+                            // Check if we've already added our button
+                            const alreadyAddedButton = guildsContainer.props.children.some(
+                                c => c?.key === "read-all-button" || c?.props?.accessibilityLabel === "Mark all as read"
                             );
                             
-                            if (messagesButtonIndex !== -1) {
-                                // Insert after Messages button
-                                actionsContainer.props.children.splice(
-                                    messagesButtonIndex + 1, 
-                                    0, 
-                                    React.createElement(ReadAllButton)
+                            if (!alreadyAddedButton) {
+                                // Find where to insert our button (after Home button and divider)
+                                const homeButtonIndex = guildsContainer.props.children.findIndex(
+                                    c => c?.type?.name === "HomeButton" || c?.type?.displayName === "HomeButton"
                                 );
-                            } else {
-                                // Fallback: Add to the end
-                                actionsContainer.props.children.push(React.createElement(ReadAllButton));
+                                
+                                const dividerIndex = guildsContainer.props.children.findIndex(
+                                    c => c?.type?.name === "GuildListDivider" || c?.type?.displayName === "GuildListDivider"
+                                );
+                                
+                                const insertIndex = Math.max(homeButtonIndex, dividerIndex) + 1;
+                                
+                                if (insertIndex > 0) {
+                                    // Create our button element
+                                    const readAllButtonElement = React.createElement(ReadAllButton, { key: "read-all-button" });
+                                    
+                                    // Add a divider before our button
+                                    const dividerElement = React.createElement(GuildListDivider || "div", { 
+                                        key: "read-all-divider",
+                                        style: { marginTop: 8, marginBottom: 8 }
+                                    });
+                                    
+                                    // Insert divider and our button
+                                    guildsContainer.props.children.splice(insertIndex, 0, dividerElement, readAllButtonElement);
+                                } else {
+                                    // Fallback: add to beginning of list
+                                    guildsContainer.props.children.unshift(React.createElement(ReadAllButton, { key: "read-all-button" }));
+                                }
                             }
                         }
                     } catch (e) {
-                        console.error("Error patching TopNavigation:", e);
+                        console.error("Error patching GuildList:", e);
                     }
                     
                     return res;
                 });
                 
-                console.log("Using fallback TopNavigation patch");
+                console.log("Successfully patched GuildList");
                 showToast("Read-all plugin loaded", getToastOptions("success"));
             } else {
-                console.error("Could not find any navigation components to patch");
+                console.error("Could not find GuildList component to patch");
                 showToast("Read-all plugin may not work correctly", getToastOptions("warning"));
             }
         } catch (e) {
@@ -189,7 +205,7 @@ export default {
     
     onUnload: () => {
         // Clean up patches
-        if (unpatchHeader) unpatchHeader();
+        if (unpatchGuildList) unpatchGuildList();
         showToast("Read-all plugin unloaded", getToastOptions("info"));
     },
     
@@ -198,17 +214,19 @@ export default {
 
 // Helper function to find elements in React tree
 function findInReactTree(node, predicate) {
+    if (!node) return null;
     if (predicate(node)) return node;
+    
     if (node?.props?.children) {
         if (Array.isArray(node.props.children)) {
             for (const child of node.props.children) {
                 const result = findInReactTree(child, predicate);
                 if (result) return result;
             }
-        } else {
-            const result = findInReactTree(node.props.children, predicate);
-            if (result) return result;
+        } else if (typeof node.props.children === 'object') {
+            return findInReactTree(node.props.children, predicate);
         }
     }
+    
     return null;
 }
