@@ -1,5 +1,5 @@
 import { React } from "@vendetta/common";
-import { before } from "@vendetta/patcher";
+import { before, after } from "@vendetta/patcher";
 import { findByProps, findByName } from "@vendetta/metro";
 import { getAssetIDByName } from "@vendetta/ui/assets";
 import { showToast } from "@vendetta/ui/toasts";
@@ -14,13 +14,15 @@ const GuildStore = findByProps("getGuilds", "getGuild");
 const ChannelStore = findByProps("getChannel", "getMutablePrivateChannels");
 const ReadStateStore = findByProps("getUnreadCount", "hasUnread");
 const ReadStateActions = findByProps("markGuildAsRead", "markChannelAsRead");
-const TabBarModule = findByProps("TabBar");
-const TabBar = TabBarModule?.TabBar;
-const NavigationStack = findByName("NavigationStack");
+
+// Find the top navigation components
+const HeaderBar = findByName("HeaderBar");
+const AppHeaderIcon = findByName("AppHeaderIcon") || findByProps("AppHeaderIcon")?.AppHeaderIcon;
+const HeaderBarComponents = findByProps("HeaderBarButton");
+const TopNavigation = findByName("TopNavigation") || findByProps("TopNavigation")?.TopNavigation;
 
 // Track patches for cleanup
-let unpatchTabs;
-let unpatchNavigation;
+let unpatchHeader = null;
 let canShowToast = true;
 
 // Handle marking all guilds as read
@@ -77,89 +79,107 @@ function getToastOptions(type) {
     }
 }
 
+// Create our button component
+const ReadAllButton = () => {
+    const HeaderBarButton = HeaderBarComponents?.HeaderBarButton;
+    
+    if (!HeaderBarButton) {
+        console.error("HeaderBarButton not found");
+        return null;
+    }
+    
+    return React.createElement(HeaderBarButton, {
+        onPress: markAllAsRead,
+        icon: getAssetIDByName("ic_done_all_24px") || getAssetIDByName("ic_check_24px"),
+        activeOpacity: 0.3,
+        style: { marginRight: 8 },
+        accessibilityLabel: "Mark all as read"
+    });
+};
+
 // Plugin API exports
 export default {
     onLoad: () => {
         try {
-            // Try to patch TabBar first (main approach)
-            if (TabBar) {
-                unpatchTabs = before("render", TabBar.prototype, function (args) {
-                    const self = this;
-                    
+            // Approach 1: Using HeaderBar
+            if (HeaderBar) {
+                unpatchHeader = after("default", HeaderBar, (args, res) => {
                     try {
-                        // Only patch tabs with items
-                        if (!self.props?.items?.length) return;
-                        
-                        // Find the main tab bar by checking for specific tab types
-                        const isMainTabBar = self.props.items.some(
-                            item => item.id === "home" || item.id === "friends" || item.id === "nitro"
+                        // Find the header buttons container
+                        const headerContainer = findInReactTree(res, r => 
+                            r?.props?.children?.find?.(c => 
+                                c?.props?.accessibilityLabel === "New Group DM" || 
+                                c?.props?.accessibilityLabel === "Direct Messages"
+                            )
                         );
                         
-                        if (!isMainTabBar) return;
-                        
-                        // Create our custom "Read All" tab if it doesn't exist yet
-                        const existingTabIndex = self.props.items.findIndex(i => i.id === "read-all");
-                        if (existingTabIndex === -1) {
-                            // Create our custom "Read All" tab
-                            const readAllTab = {
-                                id: "read-all",
-                                title: "Read All",
-                                icon: getAssetIDByName("ic_check_24px"), // Using a definitely available icon
-                                onPress: markAllAsRead
-                            };
-                            
-                            // Add our tab to the items
-                            self.props.items = [...self.props.items, readAllTab];
-                        }
-                    } catch (e) {
-                        console.error("Error in TabBar patch:", e);
-                    }
-                });
-                
-                console.log("Successfully patched TabBar");
-            } 
-            
-            // Alternative approach using NavigationStack
-            if (NavigationStack && !unpatchTabs) {
-                unpatchNavigation = before("render", NavigationStack.prototype, function(args) {
-                    const self = this;
-                    
-                    try {
-                        // Check if this is the bottom navigation
-                        if (self.props?.routes && Array.isArray(self.props.routes)) {
-                            // Check if we have navigation routes
-                            const isBottomNav = self.props.routes.some(
-                                route => route.name === "Home" || route.name === "Friends"
+                        if (headerContainer?.props?.children) {
+                            // Add our button after Messages button
+                            const messagesButtonIndex = headerContainer.props.children.findIndex(c => 
+                                c?.props?.accessibilityLabel === "Direct Messages"
                             );
                             
-                            if (isBottomNav) {
-                                // Add our route if not exists
-                                const existingRouteIndex = self.props.routes.findIndex(r => r.name === "ReadAll");
-                                if (existingRouteIndex === -1) {
-                                    // Add our route
-                                    self.props.routes.push({
-                                        name: "ReadAll",
-                                        params: {},
-                                        render: () => null,
-                                        icon: getAssetIDByName("ic_check_24px"),
-                                        onPress: markAllAsRead
-                                    });
-                                }
+                            if (messagesButtonIndex !== -1) {
+                                // Insert our button after the Messages button
+                                headerContainer.props.children.splice(
+                                    messagesButtonIndex + 1, 
+                                    0, 
+                                    React.createElement(ReadAllButton)
+                                );
+                            } else {
+                                // Fallback: Add to the end
+                                headerContainer.props.children.push(React.createElement(ReadAllButton));
                             }
                         }
                     } catch (e) {
-                        console.error("Error in NavigationStack patch:", e);
+                        console.error("Error patching HeaderBar:", e);
                     }
+                    
+                    return res;
                 });
                 
-                console.log("Using fallback NavigationStack patch");
-            }
-            
-            if (!unpatchTabs && !unpatchNavigation) {
-                console.error("Could not patch any navigation components");
-                showToast("Read-all plugin may not work correctly", getToastOptions("warning"));
-            } else {
+                console.log("Successfully patched HeaderBar");
                 showToast("Read-all plugin loaded", getToastOptions("success"));
+            } else if (TopNavigation) {
+                // Alternative approach using TopNavigation
+                unpatchHeader = after("default", TopNavigation, (args, res) => {
+                    try {
+                        // Find the actions container
+                        const actionsContainer = findInReactTree(res, r => 
+                            Array.isArray(r?.props?.children) && 
+                            r.props.children.some(c => c?.props?.accessibilityLabel === "Direct Messages")
+                        );
+                        
+                        if (actionsContainer?.props?.children) {
+                            // Add our button after Messages
+                            const messagesButtonIndex = actionsContainer.props.children.findIndex(c => 
+                                c?.props?.accessibilityLabel === "Direct Messages"
+                            );
+                            
+                            if (messagesButtonIndex !== -1) {
+                                // Insert after Messages button
+                                actionsContainer.props.children.splice(
+                                    messagesButtonIndex + 1, 
+                                    0, 
+                                    React.createElement(ReadAllButton)
+                                );
+                            } else {
+                                // Fallback: Add to the end
+                                actionsContainer.props.children.push(React.createElement(ReadAllButton));
+                            }
+                        }
+                    } catch (e) {
+                        console.error("Error patching TopNavigation:", e);
+                    }
+                    
+                    return res;
+                });
+                
+                console.log("Using fallback TopNavigation patch");
+                showToast("Read-all plugin loaded", getToastOptions("success"));
+            } else {
+                console.error("Could not find any navigation components to patch");
+                showToast("Read-all plugin may not work correctly", getToastOptions("warning"));
             }
         } catch (e) {
             console.error("Error during plugin load:", e);
@@ -169,10 +189,26 @@ export default {
     
     onUnload: () => {
         // Clean up patches
-        if (unpatchTabs) unpatchTabs();
-        if (unpatchNavigation) unpatchNavigation();
+        if (unpatchHeader) unpatchHeader();
         showToast("Read-all plugin unloaded", getToastOptions("info"));
     },
     
     settings: Settings
 };
+
+// Helper function to find elements in React tree
+function findInReactTree(node, predicate) {
+    if (predicate(node)) return node;
+    if (node?.props?.children) {
+        if (Array.isArray(node.props.children)) {
+            for (const child of node.props.children) {
+                const result = findInReactTree(child, predicate);
+                if (result) return result;
+            }
+        } else {
+            const result = findInReactTree(node.props.children, predicate);
+            if (result) return result;
+        }
+    }
+    return null;
+}
